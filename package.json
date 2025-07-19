@@ -5,6 +5,7 @@
   "scripts": {
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
+    "download-thumbnails": "node ./tango-data/download-thumbnails.js",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
