@@ -1,50 +1,43 @@
-import React, { useRef } from 'react';
-import { View } from 'react-native';
+import { Colors } from '@/constants/Colors';
+import { CellData } from '@/types/tango';
+import React from 'react';
+import { StyleSheet, View } from 'react-native';
 import { PuzzleCell } from './PuzzleCell';
 
-export type CellMeta = {
-  color: string;
-  style: any;
-};
-
 type PuzzleGridProps = {
-  board: any;
-  cellStates: any;
+  board: CellData[][];
   onCellPress: (row: number, col: number) => void;
-  isSolved: boolean;
-  regionErrors?: Set<string>;
 };
 
-export const PuzzleGrid = ({ board, cellStates, onCellPress, isSolved, regionErrors }: PuzzleGridProps) => {
-  const gridRef = useRef<View>(null);
-
+export const PuzzleGrid = ({ board, onCellPress }: PuzzleGridProps) => {
   return (
-      <View ref={gridRef}>
-        {board.map((row:any, rowIndex:any) => (
-          <View key={rowIndex} style={{ flexDirection: 'row' }}>
-            {row.map((cell:any, colIndex:any) => {
-              const key = `${rowIndex},${colIndex}`;
-              const hasError = regionErrors?.has(key) ?? false;
-              
-              return (
-                <PuzzleCell
-                  key={key}
-                  row={rowIndex}
-                  col={colIndex}
-                  state={cellStates[key] ?? ''}
-                  color={cell.color}
-                  borderStyle={cell.style}
-                  hasError={hasError}
-                  onPress={() => {
-                    if (!isSolved) {
-                      onCellPress(rowIndex, colIndex);
-                    }
-                  }}
-                />
-              );
-            })}
-          </View>
-        ))}
-      </View>
+    <View style={styles.gridContainer}>
+      {board.map((row, rowIndex) => (
+        <View key={`row-${rowIndex}`} style={styles.row}>
+          {row.map((cell, colIndex) => (
+            <PuzzleCell
+              key={`${rowIndex}-${colIndex}`}
+              row={rowIndex}
+              col={colIndex}
+              value={cell.value}
+              color={cell.color}
+              style={cell.style}
+              constraint={cell.constraint}
+              onPress={() => onCellPress(rowIndex, colIndex)}
+            />
+          ))}
+        </View>
+      ))}
+    </View>
   );
 };
+
+const styles = StyleSheet.create({
+  gridContainer: {
+    borderWidth: 2,
+    borderColor: Colors.line,
+  },
+  row: {
+    flexDirection: 'row',
+  },
+});

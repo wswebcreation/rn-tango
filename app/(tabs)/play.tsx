@@ -1,16 +1,16 @@
 import React from 'react';
-import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 // import { useQueensStore } from '@/store/useQueensStore';
+import { PuzzleGrid } from '@/components/ui/PuzzleGrid';
 import { Colors } from '@/constants/Colors';
-// import { PuzzleGrid } from '@/components/ui/PuzzleGrid';
 // import { usePuzzleLogic } from '@/hooks/usePuzzleLogic';
 import { usePuzzle } from '@/hooks/usePuzzle';
 // import { usePuzzleSolvedStatus } from '@/hooks/usePuzzleSolvedStatus';
 // import { usePuzzleTimer } from '@/hooks/usePuzzleTimer';
 
 import { Button } from '@/components/ui/Button';
-import { Constraint } from '@/types/tango';
+import { CellData, Constraint, Direction } from '@/types/tango';
 
 const PuzzleBoard = () => {
   // const {
@@ -56,11 +56,12 @@ const PuzzleBoard = () => {
   }
 
   const size = puzzle.size;
-  const board = Array.from({ length: size }, (_, rowIndex) =>
+  const board: CellData[][] = Array.from({ length: size }, (_, rowIndex) =>
     Array.from({ length: size }, (_, colIndex) => {
       const key = `${rowIndex},${colIndex}`;
       const isPrefilled = key in puzzle.prefilled;
       const color = isPrefilled ? Colors.preFilled : Colors.blueBg;
+      
       const constraintHint = (() => {
         const constraint = puzzle.constraints.find((constraint: Constraint) => {
           return constraint[0] === key;
@@ -68,9 +69,10 @@ const PuzzleBoard = () => {
 
         if (!constraint) return null;
         
-        const [cell1Row] = constraint[0].split(',').map(Number);
-        const [cell2Row] = constraint[1].split(',').map(Number);
-        const direction = cell1Row === cell2Row ? 'right' : 'down';
+        const [cell1Row, cell1Col] = constraint[0].split(',').map(Number);
+        const [cell2Row, cell2Col] = constraint[1].split(',').map(Number);
+        
+        const direction: Direction = cell1Row === cell2Row ? 'right' : 'down';
         
         return {
           direction,
@@ -93,40 +95,21 @@ const PuzzleBoard = () => {
     })
   );
 
+  const handleCellPress = (row: number, col: number) => {
+    // Handle cell press logic here
+    console.log(`Cell pressed: ${row}, ${col}`);
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.header}>🌑/☀️</Text>
       <Text style={styles.title}>Tango #{/*currentPuzzleId*/}</Text>
       <Text style={styles.timer}>⏱️ {/*formatTime(elapsed)*/}</Text>
 
-      <View style={{ borderWidth: 2, borderColor: Colors.line }}>
-        {/* <PuzzleGrid
-          board={board}
-          cellStates={cellStates}
-          onCellPress={toggleCell}
-          isSolved={isSolved}
-          // regionErrors={regionErrors}
-        /> */}
-
-        { 
-          // now create the grid based on the board
-          board.map((row, rowIndex) => (
-            <View style={styles.row} key={`${rowIndex}`}>
-              {row.map((cell, colIndex) => (
-                <TouchableOpacity key={`${rowIndex}-${colIndex}`} style={cell.style}>
-                  <Text>{cell.value}</Text>
-                  {
-                    // if the cell has a constraint, then we need to show the constraint
-                    cell.constraint && (
-                      <Text>{cell.constraint.direction} {cell.constraint.value}</Text>
-                    )
-                  }
-                </TouchableOpacity>
-              ))}
-            </View>
-          ))
-        }
-      </View>
+      <PuzzleGrid 
+        board={board}
+        onCellPress={handleCellPress}
+      />
 
       {/* {isSolved && (
         <View style={styles.overlay} pointerEvents="none">

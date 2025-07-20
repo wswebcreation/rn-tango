@@ -1,96 +1,58 @@
-import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, ViewStyle, View } from 'react-native';
-import { CellState } from '@/store/useQueensStore';
 import { Colors } from '@/constants/Colors';
+import { CellConstraint, CellValue } from '@/types/tango';
+import React from 'react';
+import { StyleSheet, Text, TouchableOpacity, ViewStyle } from 'react-native';
 
 type PuzzleCellProps = {
   row: number;
   col: number;
-  state: CellState;
+  value: CellValue | undefined;
   color: string;
-  borderStyle: ViewStyle;
-  hasError: boolean;
+  style: ViewStyle;
+  constraint: CellConstraint;
   onPress: () => void;
 };
 
-export const PuzzleCell = ({ state, color, borderStyle, hasError, onPress }: PuzzleCellProps) => {
-  const errorStyle = hasError && state === 'Q' ? {
-    borderColor: '#FF0000',
-    borderWidth: 3,
-  } : {};
-
+export const PuzzleCell = ({ 
+  value, 
+  color, 
+  style, 
+  constraint, 
+  onPress 
+}: PuzzleCellProps) => {
   return (
     <TouchableOpacity
       onPress={onPress}
-      style={{
-        backgroundColor: color,
-        ...borderStyle,
-        ...errorStyle,
-        alignItems: 'center',
-        justifyContent: 'center',
-        position: 'relative',
-      }}
+      style={[
+        {
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+        },
+        style
+      ]}
     >
-      {hasError && state === 'Q' && (
-        <>
-          {/* Red diagonal lines */}
-          <View style={[styles.diagonal, styles.diagonalTopLeft]} />
-          <View style={[styles.diagonal, styles.diagonalTopRight]} />
-          {/* Red transparent overlay */}
-          <View style={styles.errorOverlay} />
-        </>
+      {value && <Text style={styles.cellValue}>{value}</Text>}
+      {constraint && (
+        <Text style={styles.constraintText}>
+          {constraint.direction} {constraint.value}
+        </Text>
       )}
-      {state === 'Q' && <Text style={[styles.queen, hasError && styles.errorQueen]}>👑</Text>}
-      {state === 'X' && <Text style={styles.x}>✕</Text>}
     </TouchableOpacity>
   );
 };
 
 const styles = StyleSheet.create({
-  queen: {
+  cellValue: {
     fontSize: 24,
-    zIndex: 2,
+    fontWeight: 'bold',
+    color: Colors.text,
   },
-  errorQueen: {
-  },
-  x: {
+  constraintText: {
     fontSize: 12,
-    color: Colors.black,
-  },
-  errorOverlay: {
+    color: Colors.text,
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(255, 0, 0, 0.2)',
-    zIndex: 1,
-  },
-  diagonal: {
-    position: 'absolute',
-    backgroundColor: '#FF0000',
-    zIndex: 1,
-  },
-  diagonalTopLeft: {
-    width: '141%', // sqrt(2) * 100% to cover diagonal
-    height: 2,
-    top: '50%',
-    left: '50%',
-    transform: [
-      { translateX: '-50%' },
-      { translateY: -1 },
-      { rotate: '45deg' },
-    ],
-  },
-  diagonalTopRight: {
-    width: '141%', // sqrt(2) * 100% to cover diagonal
-    height: 2,
-    top: '50%',
-    left: '50%',
-    transform: [
-      { translateX: '-50%' },
-      { translateY: -1 },
-      { rotate: '-45deg' },
-    ],
+    bottom: 2,
+    right: 2,
   },
 });

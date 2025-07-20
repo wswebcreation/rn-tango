@@ -7,7 +7,7 @@ import * as FileSystem from 'expo-file-system';
 export async function loadLocalPuzzles() {
   try {
     const data = await FileSystem.readAsStringAsync(PUZZLES_PATH);
-    console.log('data = ', data);
+
     return JSON.parse(data);
   } catch {
     return fallbackPuzzles;

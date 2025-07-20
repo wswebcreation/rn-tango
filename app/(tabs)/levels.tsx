@@ -17,7 +17,6 @@ const LevelsScreen = () => {
   const { puzzles, loading } = usePuzzles();
   // const { setCurrentPuzzle, solvedPuzzles, currentPuzzleId, puzzlesState } = useQueensStore();
   const router = useRouter();
-  console.log('puzzles = ', puzzles);
 
   if (loading) {
     return (
