@@ -64,7 +64,7 @@ The Tango data needs to look like this
 ```json
 [
   {
-    "number": 1,
+    "id": 1,
     "size": 6,
     "prefilled": {
       "0,0": "🌑",
@@ -86,7 +86,7 @@ The Tango data needs to look like this
 
 | Field | Type | Description|
 | ----- | ---- | ---------- |
-| `number` | `number` | Unique puzzle number |
+| `id` | `number` | Unique puzzle number |
 | `size` | `number` | Board size (e.g., 6×6) |
 | `prefilled` | `object` | Sparse key-value map of prefilled cells (`"row,col"` → `"🌑"` or `"☀️"`)                                                |
 | `constraints` | `array`  | Array of 3-item arrays: `[from, to, type]`, where `from` and `to` are `"row,col"` strings, and `type` is `"="` or `"x"` |

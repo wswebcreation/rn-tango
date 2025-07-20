@@ -1,75 +1,116 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { BulletList } from '@/components/ui/BulletList';
+import { Button } from '@/components/ui/Button';
+import { Colors } from '@/constants/Colors';
+import { usePuzzlesMetadata } from '@/hooks/usePuzzlesMetadata';
+import React from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
+    const { loading, lastUpdated, checkForNewPuzzles, updateAvailable } = usePuzzlesMetadata();
+    const formatDate = (isoString: string) => {
+        const date = new Date(isoString);
+        return date.toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' }) + 
+         ' ' + 
+         date.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>How to Play</Text>
+          <BulletList
+            items={[
+              'Fill the grid so that each cell contains either a sun (☀️) or a moon (🌑).',
+              'No more than two suns or two moons may appear next to each other, either horizontally or vertically.',
+              'Each row and column must contain the same number of suns and moons.',
+              'Cells connected with a "=" sign must contain the same type (both ☀️ or both 🌑)',
+              'Cells connected with a "× sign" must contain opposite types (one ☀️ and one 🌑).',
+              'Each puzzle has exactly one correct solution, which can always be found through pure logic—guessing is never required.'
+            ]}
+          />
+        </View>
+
+        {lastUpdated && (
+          <Text style={styles.lastUpdated}>Last Updated: {formatDate(lastUpdated)}</Text>
+        )}
+
+        {updateAvailable && (
+          <View style={styles.updateWarning}>
+            <Text style={styles.updateWarningText}>🚀 New puzzles available! Click &quot;Check for New Puzzles&quot;</Text>
+          </View>
+        )}
+
+        <View style={styles.buttonContainer}>
+          <Button
+            label={loading ? 'Checking...' : 'Check for New Puzzles'}
+            containerStyle={styles.button}
+            onPress={checkForNewPuzzles}
+          />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    backgroundColor: Colors.blueBg,
   },
-  stepContainer: {
-    gap: 8,
+  content: {
+    padding: 20,
+    alignItems: 'center',
+    },
+  button: {
+      width: '80%',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: Colors.white,
+    marginBottom: 16,
+  },
+  section: {
+    marginBottom: 24,
+    width: '100%',
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: Colors.white,
+    marginBottom: 12,
+  },
+  sectionText: {
+    fontSize: 16,
+    color: Colors.text,
     marginBottom: 8,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  buttonContainer: {
+    marginTop: 20,
+    width: '100%',
+    alignItems: 'center',
+    },
+    lastUpdated: {
+        marginTop: 12,
+        fontSize: 14,
+        color: Colors.text,
   },
+    
+  updateWarning: {
+    marginTop: 16,
+    backgroundColor: Colors.preFilled,
+    borderColor: Colors.preFilled,
+    borderWidth: 1,
+    padding: 12,
+    borderRadius: 8,
+  },
+  updateWarningText: {
+    color: Colors.black,
+    fontSize: 14,
+    fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  
 });
