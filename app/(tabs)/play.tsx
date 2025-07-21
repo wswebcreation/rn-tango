@@ -4,9 +4,10 @@ import { Colors } from '@/constants/Colors';
 import { usePuzzle } from '@/hooks/usePuzzle';
 import { usePuzzleLogic } from '@/hooks/usePuzzleLogic';
 import { usePuzzleTimer } from '@/hooks/usePuzzleTimer';
+import { addOnPuzzlesUpdatedCallback, removeOnPuzzlesUpdatedCallback } from '@/lib/puzzleManager';
 import { useTangoStore } from '@/store/useTangoStore';
 import { CellData } from '@/types/tango';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -18,7 +19,16 @@ const PuzzleBoard = () => {
     goToPreviousPuzzle,
   } = useTangoStore();
   
-  const { puzzle, loading } = usePuzzle(currentPuzzleId);
+  const { puzzle, loading, refreshPuzzle } = usePuzzle(currentPuzzleId);
+  
+  useEffect(() => {
+    addOnPuzzlesUpdatedCallback(refreshPuzzle);
+    
+    return () => {
+      removeOnPuzzlesUpdatedCallback(refreshPuzzle);
+    };
+  }, [refreshPuzzle]);
+
   const screenWidth = Dimensions.get('window').width;
   const padding = 10;
   const boardSize = puzzle?.size ?? 8;

@@ -1,6 +1,6 @@
-# LinkedIn Games Tango App
+# LinkedIn Games Tango App fir iOS
 
-I'd love to play the LinkedIn Tango game, but there is no history. So I've downloaded the history and created my own Tango React Native App with [EXPO](https://expo.dev/)
+I'd love to play the LinkedIn Tango game, but there is no history. So I've downloaded the history and created my own Tango React Native App with [EXPO](https://expo.dev/). **This project only supports iOS, NOT Android**
 
 ## Collect Tango data
 

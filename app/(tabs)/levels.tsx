@@ -1,9 +1,10 @@
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/Colors';
 import { usePuzzles } from '@/hooks/usePuzzles';
+import { addOnPuzzlesUpdatedCallback, removeOnPuzzlesUpdatedCallback } from '@/lib/puzzleManager';
 import { useTangoStore } from '@/store/useTangoStore';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useEffect } from 'react';
 import { FlatList, StyleSheet, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -15,9 +16,17 @@ const formatTime = (seconds: number): string => {
 };
 
 const LevelsScreen = () => {
-  const { puzzles, loading } = usePuzzles();
+  const { puzzles, loading, refreshPuzzles } = usePuzzles();
   const { setCurrentPuzzle, solvedPuzzles, puzzlesState, currentPuzzleId } = useTangoStore();
   const router = useRouter();
+
+  useEffect(() => {
+    addOnPuzzlesUpdatedCallback(refreshPuzzles);
+    
+    return () => {
+      removeOnPuzzlesUpdatedCallback(refreshPuzzles);
+    };
+  }, [refreshPuzzles]);
 
   if (loading) {
     return (

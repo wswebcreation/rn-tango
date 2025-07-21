@@ -4,9 +4,18 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 
 let onPuzzlesResetCallback: (() => void) | null = null;
+let onPuzzlesUpdatedCallbacks: (() => void)[] = [];
 
 export function setOnPuzzlesResetCallback(callback: (() => void) | null) {
   onPuzzlesResetCallback = callback;
+}
+
+export function addOnPuzzlesUpdatedCallback(callback: () => void) {
+  onPuzzlesUpdatedCallbacks.push(callback);
+}
+
+export function removeOnPuzzlesUpdatedCallback(callback: () => void) {
+  onPuzzlesUpdatedCallbacks = onPuzzlesUpdatedCallbacks.filter(cb => cb !== callback);
 }
 
 export async function loadPuzzles() {
@@ -36,6 +45,10 @@ export async function fetchAndStorePuzzles() {
       await AsyncStorage.setItem(VERSION_KEY, String(remoteVersion));
       await AsyncStorage.setItem(UPDATED_KEY, new Date().toISOString());
       console.log('✅ New puzzles downloaded and saved.');
+      
+      if (onPuzzlesUpdatedCallbacks.length > 0) {
+        onPuzzlesUpdatedCallbacks.forEach(callback => callback());
+      }
     } else {
       console.log('ℹ️ Puzzles are already up to date.');
     }
@@ -73,6 +86,10 @@ export async function resetToFallbackPuzzles() {
     
     if (onPuzzlesResetCallback) {
       onPuzzlesResetCallback();
+    }
+    
+    if (onPuzzlesUpdatedCallbacks.length > 0) {
+      onPuzzlesUpdatedCallbacks.forEach(callback => callback());
     }
   } catch (error) {
     console.error('❌ Failed to reset puzzles:', error);

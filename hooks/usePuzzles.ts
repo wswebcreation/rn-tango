@@ -6,6 +6,7 @@ export function usePuzzles() {
   const [puzzles, setPuzzles] = useState<Puzzle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     async function loadPuzzles() {
@@ -22,7 +23,11 @@ export function usePuzzles() {
     }
 
     loadPuzzles();
-  }, []);
+  }, [refreshTrigger]);
 
-  return { puzzles, loading, error };
+  const refreshPuzzles = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
+
+  return { puzzles, loading, error, refreshPuzzles };
 }
