@@ -1,25 +1,18 @@
 import { Colors } from '@/constants/Colors';
-import { CellConstraint, CellValue } from '@/types/tango';
+import { PuzzleCellProps } from '@/types/tango';
 import React from 'react';
-import { StyleSheet, Text, TouchableOpacity, ViewStyle } from 'react-native';
-
-type PuzzleCellProps = {
-  row: number;
-  col: number;
-  value: CellValue | undefined;
-  color: string;
-  style: ViewStyle;
-  constraint: CellConstraint;
-  onPress: () => void;
-};
+import { StyleSheet, Text, TouchableOpacity } from 'react-native';
 
 export const PuzzleCell = ({ 
   value, 
-  color, 
   style, 
-  constraint, 
   onPress 
 }: PuzzleCellProps) => {
+  const cellWidth = typeof style.width === 'number' ? style.width : 50;
+  const cellHeight = typeof style.height === 'number' ? style.height : 50;
+  const cellSize = Math.min(cellWidth, cellHeight);  
+  const valueFontSize = Math.max(12, cellSize * 0.5);
+
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -28,14 +21,14 @@ export const PuzzleCell = ({
           alignItems: 'center',
           justifyContent: 'center',
           position: 'relative',
+          overflow: 'visible',
         },
         style
       ]}
     >
-      {value && <Text style={styles.cellValue}>{value}</Text>}
-      {constraint && (
-        <Text style={styles.constraintText}>
-          {constraint.direction} {constraint.value}
+      {value && (
+        <Text style={[styles.cellValue, { fontSize: valueFontSize }]}>
+          {value}
         </Text>
       )}
     </TouchableOpacity>
@@ -44,15 +37,7 @@ export const PuzzleCell = ({
 
 const styles = StyleSheet.create({
   cellValue: {
-    fontSize: 24,
     fontWeight: 'bold',
     color: Colors.text,
-  },
-  constraintText: {
-    fontSize: 12,
-    color: Colors.text,
-    position: 'absolute',
-    bottom: 2,
-    right: 2,
   },
 });

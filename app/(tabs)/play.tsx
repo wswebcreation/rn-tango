@@ -69,9 +69,8 @@ const PuzzleBoard = () => {
 
         if (!constraint) return null;
         
-        const [cell1Row, cell1Col] = constraint[0].split(',').map(Number);
-        const [cell2Row, cell2Col] = constraint[1].split(',').map(Number);
-        
+        const [cell1Row] = constraint[0].split(',').map(Number);
+        const [cell2Row] = constraint[1].split(',').map(Number);
         const direction: Direction = cell1Row === cell2Row ? 'right' : 'down';
         
         return {
