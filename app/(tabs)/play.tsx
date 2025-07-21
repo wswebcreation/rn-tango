@@ -141,7 +141,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.active,
   },
   solvedButtonText: {
-    color: Colors.white
+    color: Colors.activeText
   },
   overlay: {
     position: 'absolute',
@@ -151,7 +151,7 @@ const styles = StyleSheet.create({
     right: 0,
     alignItems: 'center',
     justifyContent: 'center',
-    zIndex: 1
+    zIndex: 1000
   },
   header: {
     fontSize: 36,

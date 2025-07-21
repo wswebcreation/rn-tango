@@ -1,11 +1,15 @@
 import { useTangoStore } from '@/store/useTangoStore';
 import { CellCoordinate, CellValue, Constraint, Direction, Puzzle } from '@/types/tango';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 export function usePuzzleLogic(puzzle: Puzzle | undefined, puzzleId: number) {
   const { puzzlesState, toggleCell, undoLastMove, resetBoard, markPuzzleSolved } = useTangoStore();
   const puzzleState = puzzlesState[puzzleId];
   const boardState = puzzleState?.boardState || { cells: {}, moveHistory: [], isSolved: false };
+
+  const [delayedErrors, setDelayedErrors] = useState<Set<string>>(new Set());
+  const errorTimeouts = useRef<Map<string, number>>(new Map());
+
   const boardMatrix = useMemo(() => {
     if (!puzzle) return [];
     
@@ -24,31 +28,25 @@ export function usePuzzleLogic(puzzle: Puzzle | undefined, puzzleId: number) {
     const value = boardMatrix[row][col];
     if (!value) return true;
 
-    const directions = [
-      [-1, 0], [1, 0], [0, -1], [0, 1] // up, down, left, right
-    ];
-
-    let consecutiveCount = 1;
-
-    for (const [dr, dc] of directions) {
-      let r = row + dr;
-      let c = col + dc;
-      let count = 0;
-
-      while (
-        r >= 0 && r < puzzle!.size &&
-        c >= 0 && c < puzzle!.size &&
-        boardMatrix[r][c] === value
-      ) {
-        count++;
-        r += dr;
-        c += dc;
-      }
-
-      consecutiveCount += count;
+    let horizontalCount = 1;
+    for (let c = col - 1; c >= 0 && boardMatrix[row][c] === value; c--) {
+      horizontalCount++;
     }
+    for (let c = col + 1; c < puzzle!.size && boardMatrix[row][c] === value; c++) {
+      horizontalCount++;
+    }
+    if (horizontalCount > 2) return false;
 
-    return consecutiveCount <= 2;
+    let verticalCount = 1;
+    for (let r = row - 1; r >= 0 && boardMatrix[r][col] === value; r--) {
+      verticalCount++;
+    }
+    for (let r = row + 1; r < puzzle!.size && boardMatrix[r][col] === value; r++) {
+      verticalCount++;
+    }
+    if (verticalCount > 2) return false;
+
+    return true;
   };
 
   const validateRowColumnBalance = (): boolean => {
@@ -144,27 +142,23 @@ export function usePuzzleLogic(puzzle: Puzzle | undefined, puzzleId: number) {
         const value = boardMatrix[row][col];
         if (!value) continue;
 
-        const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-        let consecutiveCount = 1;
-
-        for (const [dr, dc] of directions) {
-          let r = row + dr;
-          let c = col + dc;
-          let count = 0;
-
-          while (
-            r >= 0 && r < puzzle.size &&
-            c >= 0 && c < puzzle.size &&
-            boardMatrix[r][c] === value
-          ) {
-            count++;
-            r += dr;
-            c += dc;
-          }
-          consecutiveCount += count;
+        let horizontalCount = 1;
+        for (let c = col - 1; c >= 0 && boardMatrix[row][c] === value; c--) {
+          horizontalCount++;
         }
+        for (let c = col + 1; c < puzzle.size && boardMatrix[row][c] === value; c++) {
+          horizontalCount++;
+        }
+        if (horizontalCount > 2) return false;
 
-        if (consecutiveCount > 2) return false;
+        let verticalCount = 1;
+        for (let r = row - 1; r >= 0 && boardMatrix[r][col] === value; r--) {
+          verticalCount++;
+        }
+        for (let r = row + 1; r < puzzle.size && boardMatrix[r][col] === value; r++) {
+          verticalCount++;
+        }
+        if (verticalCount > 2) return false;
       }
     }
 
@@ -250,35 +244,33 @@ export function usePuzzleLogic(puzzle: Puzzle | undefined, puzzleId: number) {
     };
   };
 
-  const getCellErrors = useMemo(() => {
+  const immediateErrors = useMemo(() => {
     if (!puzzle) return new Set<string>();
     
-    const errorCells = new Set<string>();
-
+    const errors = new Set<string>();
     const checkAdjacentCells = (row: number, col: number): boolean => {
       const value = boardMatrix[row][col];
       if (!value) return true;
 
-      const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-      let consecutiveCount = 1;
-
-      for (const [dr, dc] of directions) {
-        let r = row + dr;
-        let c = col + dc;
-        let count = 0;
-
-        while (
-          r >= 0 && r < puzzle.size &&
-          c >= 0 && c < puzzle.size &&
-          boardMatrix[r][c] === value
-        ) {
-          count++;
-          r += dr;
-          c += dc;
-        }
-        consecutiveCount += count;
+      let horizontalCount = 1;
+      for (let c = col - 1; c >= 0 && boardMatrix[row][c] === value; c--) {
+        horizontalCount++;
       }
-      return consecutiveCount <= 2;
+      for (let c = col + 1; c < puzzle.size && boardMatrix[row][c] === value; c++) {
+        horizontalCount++;
+      }
+      if (horizontalCount > 2) return false;
+
+      let verticalCount = 1;
+      for (let r = row - 1; r >= 0 && boardMatrix[r][col] === value; r--) {
+        verticalCount++;
+      }
+      for (let r = row + 1; r < puzzle.size && boardMatrix[r][col] === value; r++) {
+        verticalCount++;
+      }
+      if (verticalCount > 2) return false;
+
+      return true;
     };
 
     for (let row = 0; row < puzzle.size; row++) {
@@ -287,13 +279,13 @@ export function usePuzzleLogic(puzzle: Puzzle | undefined, puzzleId: number) {
         const value = boardMatrix[row][col];
         
         if (!value) continue;
-
+        
         const rowComplete = boardMatrix[row].every(cell => cell !== undefined);
         const colComplete = boardMatrix.every(rowArray => rowArray[col] !== undefined);
 
         if (rowComplete || colComplete) {
           if (!checkAdjacentCells(row, col)) {
-            errorCells.add(coordinate);
+            errors.add(coordinate);
           }
 
           if (rowComplete) {
@@ -302,7 +294,7 @@ export function usePuzzleLogic(puzzle: Puzzle | undefined, puzzleId: number) {
             if (suns !== moons) {
               for (let c = 0; c < puzzle.size; c++) {
                 if (boardMatrix[row][c]) {
-                  errorCells.add(`${row},${c}`);
+                  errors.add(`${row},${c}`);
                 }
               }
             }
@@ -314,7 +306,7 @@ export function usePuzzleLogic(puzzle: Puzzle | undefined, puzzleId: number) {
             if (suns !== moons) {
               for (let r = 0; r < puzzle.size; r++) {
                 if (boardMatrix[r][col]) {
-                  errorCells.add(`${r},${col}`);
+                  errors.add(`${r},${col}`);
                 }
               }
             }
@@ -324,16 +316,17 @@ export function usePuzzleLogic(puzzle: Puzzle | undefined, puzzleId: number) {
             const [coord1, coord2, constraintType] = constraint;
             const [row1, col1] = coord1.split(',').map(Number);
             const [row2, col2] = coord2.split(',').map(Number);
+
             const value1 = boardMatrix[row1][col1];
             const value2 = boardMatrix[row2][col2];
 
             if (value1 && value2) {
               if (constraintType === "=" && value1 !== value2) {
-                errorCells.add(coord1);
-                errorCells.add(coord2);
+                errors.add(coord1);
+                errors.add(coord2);
               } else if (constraintType === "x" && value1 === value2) {
-                errorCells.add(coord1);
-                errorCells.add(coord2);
+                errors.add(coord1);
+                errors.add(coord2);
               }
             }
           }
@@ -341,8 +334,47 @@ export function usePuzzleLogic(puzzle: Puzzle | undefined, puzzleId: number) {
       }
     }
 
-    return errorCells;
+    return errors;
   }, [puzzle, boardMatrix]);
+
+  useEffect(() => {
+    const currentTimeouts = errorTimeouts.current;
+    currentTimeouts.forEach((timeout, coordinate) => {
+      if (!immediateErrors.has(coordinate)) {
+        clearTimeout(timeout);
+        currentTimeouts.delete(coordinate);
+      }
+    });
+
+    setDelayedErrors(prev => {
+      const next = new Set(prev);
+      let hasChanges = false;
+      prev.forEach(coordinate => {
+        if (!immediateErrors.has(coordinate)) {
+          next.delete(coordinate);
+          hasChanges = true;
+        }
+      });
+      return hasChanges ? next : prev;
+    });
+
+    immediateErrors.forEach(coordinate => {
+      if (!currentTimeouts.has(coordinate) && !delayedErrors.has(coordinate)) {
+        const timeout = setTimeout(() => {
+          setDelayedErrors(prev => new Set(prev).add(coordinate));
+          currentTimeouts.delete(coordinate);
+        }, 2000);
+        currentTimeouts.set(coordinate, timeout);
+      }
+    });
+
+    return () => {
+      currentTimeouts.forEach(timeout => clearTimeout(timeout));
+      currentTimeouts.clear();
+    };
+  }, [immediateErrors, delayedErrors]);
+
+  const getCellErrors = delayedErrors;
 
   const hasCellError = (row: number, col: number): boolean => {
     const coordinate: CellCoordinate = `${row},${col}`;

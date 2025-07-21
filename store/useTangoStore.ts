@@ -233,7 +233,7 @@ export const useTangoStore = create<TangoStore>()(
       },
 
       undoLastMove: (puzzleId: number) => {
-        const { puzzlesState } = get();
+        const { puzzlesState, solvedPuzzles } = get();
         const currentState = puzzlesState[puzzleId];
         
         if (!currentState || !currentState.boardState || currentState.boardState.moveHistory.length === 0) return;
@@ -247,6 +247,7 @@ export const useTangoStore = create<TangoStore>()(
             ...state.puzzlesState,
             [puzzleId]: {
               ...currentState,
+              isSolved: false,
               boardState: {
                 ...currentState.boardState,
                 cells: {
@@ -254,14 +255,16 @@ export const useTangoStore = create<TangoStore>()(
                   [coordinate]: lastMove.previousValue,
                 },
                 moveHistory,
+                isSolved: false,
               },
             },
           },
+          solvedPuzzles: solvedPuzzles.filter(id => id !== puzzleId),
         }));
       },
 
       resetBoard: (puzzleId: number) => {
-        const { puzzlesState } = get();
+        const { puzzlesState, solvedPuzzles } = get();
         const currentState = puzzlesState[puzzleId];
         
         if (!currentState) return;
@@ -271,11 +274,13 @@ export const useTangoStore = create<TangoStore>()(
             ...state.puzzlesState,
             [puzzleId]: {
               ...currentState,
+              isSolved: false,
               boardState: createBoardState(),
               startTime: null,
               isTimerRunning: false,
             },
           },
+          solvedPuzzles: solvedPuzzles.filter(id => id !== puzzleId),
         }));
       },
 
