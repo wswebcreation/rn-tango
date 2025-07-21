@@ -39,6 +39,7 @@ export const PuzzleGrid = ({ board, onCellPress }: PuzzleGridProps) => {
               value={cell.value}
               style={cell.style}
               onPress={() => onCellPress(rowIndex, colIndex)}
+              hasError={cell.hasError}
             />
           ))}
         </View>

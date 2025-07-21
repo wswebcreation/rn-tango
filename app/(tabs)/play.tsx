@@ -2,9 +2,10 @@ import { Button } from '@/components/ui/Button';
 import { PuzzleGrid } from '@/components/ui/PuzzleGrid';
 import { Colors } from '@/constants/Colors';
 import { usePuzzle } from '@/hooks/usePuzzle';
+import { usePuzzleLogic } from '@/hooks/usePuzzleLogic';
 import { usePuzzleTimer } from '@/hooks/usePuzzleTimer';
 import { useTangoStore } from '@/store/useTangoStore';
-import { CellData, Constraint, Direction } from '@/types/tango';
+import { CellData } from '@/types/tango';
 import React from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,7 +15,8 @@ const PuzzleBoard = () => {
     currentPuzzleId,
     puzzlesState,
     setCurrentPuzzle,
-    markPuzzleSolved,
+    goToNextPuzzle,
+    goToPreviousPuzzle,
   } = useTangoStore();
   
   const { puzzle, loading } = usePuzzle(currentPuzzleId);
@@ -24,6 +26,17 @@ const PuzzleBoard = () => {
   const cellSize = Math.floor((screenWidth - padding * 2) / boardSize);
   const isSolved = puzzlesState[currentPuzzleId]?.isSolved ?? false;
   const elapsed = usePuzzleTimer(currentPuzzleId, isSolved);
+
+  // Use puzzle logic hook for validation and game mechanics
+  const {
+    handleCellPress,
+    getCellValue,
+    getCellConstraint,
+    undoLastMove,
+    resetBoard,
+    canUndo,
+    hasCellError,
+  } = usePuzzleLogic(puzzle, currentPuzzleId);
 
   const formatTime = (seconds: number) => {
     const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
@@ -50,22 +63,7 @@ const PuzzleBoard = () => {
       const isPrefilled = key in puzzle.prefilled;
       const color = isPrefilled ? Colors.preFilled : Colors.blueBg;
       
-      const constraintHint = (() => {
-        const constraint = puzzle.constraints.find((constraint: Constraint) => {
-          return constraint[0] === key;
-        });
-
-        if (!constraint) return null;
-        
-        const [cell1Row] = constraint[0].split(',').map(Number);
-        const [cell2Row] = constraint[1].split(',').map(Number);
-        const direction: Direction = cell1Row === cell2Row ? 'right' : 'down';
-        
-        return {
-          direction,
-          value: constraint[2]
-        };
-      })();
+      const constraintHint = getCellConstraint(rowIndex, colIndex);
 
       return {
         color,
@@ -76,16 +74,12 @@ const PuzzleBoard = () => {
           borderColor: Colors.line,
           backgroundColor: color
         },
-        value: puzzle.prefilled[`${rowIndex},${colIndex}`],
-        constraint: constraintHint
+        value: getCellValue(rowIndex, colIndex),
+        constraint: constraintHint,
+        hasError: hasCellError(rowIndex, colIndex),
       };
     })
   );
-
-  const handleCellPress = (row: number, col: number) => {
-    // Handle cell press logic here
-    console.log(`Cell pressed: ${row}, ${col}`);
-  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -107,15 +101,12 @@ const PuzzleBoard = () => {
       <View style={styles.buttonContainer}>
         <Button
           label="↩️ Undo"
-          onPress={() => {
-            // undoLastMove(puzzle.id);
-          }}
+          onPress={undoLastMove}
+          disabled={!canUndo}
         />
         <Button
           label="🔄 Reset"
-          onPress={() => {
-            // clearBoard(puzzle.id);
-          }}
+          onPress={resetBoard}
         />
       </View>
 
@@ -123,9 +114,7 @@ const PuzzleBoard = () => {
         containerStyle={[styles.nextButton, solvedButtonClass ]}
         textStyle={solvedButtonTextClass}
         label={isSolved ? '🎊 Next puzzle 🎊' : '← Previous puzzle'}
-        onPress={() => {
-          // Navigation logic will be implemented later
-        }}
+        onPress={isSolved ? goToNextPuzzle : goToPreviousPuzzle}
       />
     </SafeAreaView>
   );

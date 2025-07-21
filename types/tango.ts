@@ -17,6 +17,7 @@ export type CellData = {
   style: any;
   value: CellValue | undefined;
   constraint: CellConstraint;
+  hasError?: boolean;
 };
 
 export interface Puzzle {
@@ -35,6 +36,7 @@ export type PuzzleCellProps = {
   value: CellValue | undefined;
   style: ViewStyle;
   onPress: () => void;
+  hasError?: boolean;
 };
 
 export type PuzzleGridProps = {
@@ -60,11 +62,26 @@ export type ConstraintTextProps = {
   constraintHeightWidth: number;
 };
 
+export type Move = {
+  row: number;
+  col: number;
+  previousValue: CellValue | undefined;
+  newValue: CellValue | undefined;
+  timestamp: number;
+};
+
+export type BoardState = {
+  cells: Record<CellCoordinate, CellValue | undefined>;
+  moveHistory: Move[];
+  isSolved: boolean;
+};
+
 export type PuzzleState = {
   isSolved: boolean;
   totalTime: number;
   startTime: number | null;
   isTimerRunning: boolean;
+  boardState: BoardState;
 };
 
 export type TangoStore = {
@@ -72,7 +89,7 @@ export type TangoStore = {
   puzzlesState: Record<number, PuzzleState>;
   solvedPuzzles: number[];
   
-  // Actions
+  // Timer Actions
   setCurrentPuzzle: (puzzleId: number) => void;
   startTimer: (puzzleId: number) => void;
   stopTimer: (puzzleId: number) => void;
@@ -80,4 +97,11 @@ export type TangoStore = {
   resumeTimer: (puzzleId: number) => void;
   markPuzzleSolved: (puzzleId: number) => void;
   resetPuzzleState: (puzzleId: number) => void;
+  
+  // Board Actions
+  toggleCell: (puzzleId: number, row: number, col: number) => void;
+  undoLastMove: (puzzleId: number) => void;
+  resetBoard: (puzzleId: number) => void;
+  goToNextPuzzle: () => void;
+  goToPreviousPuzzle: () => void;
 };
