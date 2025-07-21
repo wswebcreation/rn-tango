@@ -2,12 +2,22 @@ import { BulletList } from '@/components/ui/BulletList';
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/Colors';
 import { usePuzzlesMetadata } from '@/hooks/usePuzzlesMetadata';
-import React from 'react';
+import { setOnPuzzlesResetCallback } from '@/lib/puzzleManager';
+import React, { useEffect } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
-    const { loading, lastUpdated, checkForNewPuzzles, updateAvailable } = usePuzzlesMetadata();
+    const { loading, lastUpdated, checkForNewPuzzles, updateAvailable, refreshMetadata } = usePuzzlesMetadata();
+    
+    useEffect(() => {
+      setOnPuzzlesResetCallback(refreshMetadata);
+      
+      return () => {
+        setOnPuzzlesResetCallback(null);
+      };
+    }, [refreshMetadata]);
+    
     const formatDate = (isoString: string) => {
         const date = new Date(isoString);
         return date.toLocaleDateString('nl-NL', { day: '2-digit', month: '2-digit', year: 'numeric' }) + 

@@ -1,20 +1,15 @@
-import { fetchAndStorePuzzles, fetchRemoteVersion, getLastUpdated, loadLocalVersion, loadPuzzles } from '@/lib/puzzleManager';
+import { fetchAndStorePuzzles, fetchRemoteVersion, getLastUpdated, loadLocalVersion } from '@/lib/puzzleManager';
 import { useEffect, useState } from 'react';
-import { resetPuzzlesCache } from './usePuzzle';
-// import { useQueensStore } from '@/store/useQueensStore';
 
 export function usePuzzlesMetadata() {
   const [loading, setLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   const [updateAvailable, setUpdateAvailable] = useState(false);
-  // const { setPuzzlesList } = useQueensStore();
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
     async function load() {
       setLoading(true);
-
-      const puzzles = await loadPuzzles();
-      // setPuzzlesList(puzzles);
 
       const updatedAt = await getLastUpdated();
       setLastUpdated(updatedAt);
@@ -23,9 +18,7 @@ export function usePuzzlesMetadata() {
       setLoading(false);
     }
     load();
-  }, [
-    // setPuzzlesList
-  ]);
+  }, [refreshTrigger]);
 
   async function checkForUpdate() {
     try {
@@ -39,13 +32,21 @@ export function usePuzzlesMetadata() {
 
   async function checkForNewPuzzles() {
     setLoading(true);
-    await fetchAndStorePuzzles();
-    resetPuzzlesCache();
-    const updatedAt = await getLastUpdated();
-    setLastUpdated(updatedAt);
-    setUpdateAvailable(false);
-    setLoading(false);
+    try {
+      await fetchAndStorePuzzles();
+      const updatedAt = await getLastUpdated();
+      setLastUpdated(updatedAt);
+      setUpdateAvailable(false);
+    } catch (error) {
+      console.error('❌ Failed to update puzzles:', error);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  return { loading, lastUpdated, updateAvailable, checkForNewPuzzles };
+  const refreshMetadata = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
+
+  return { loading, lastUpdated, updateAvailable, checkForNewPuzzles, refreshMetadata };
 }

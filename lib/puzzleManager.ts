@@ -3,6 +3,12 @@ import fallbackPuzzles from '@/constants/fallbackPuzzles.json';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 
+let onPuzzlesResetCallback: (() => void) | null = null;
+
+export function setOnPuzzlesResetCallback(callback: (() => void) | null) {
+  onPuzzlesResetCallback = callback;
+}
+
 export async function loadPuzzles() {
   try {
     const file = await FileSystem.readAsStringAsync(PUZZLES_FILE);
@@ -23,7 +29,6 @@ export async function fetchAndStorePuzzles() {
     if (remoteVersion > localVersion) {
       console.log('⬇️ New puzzles found, downloading...');
 
-      // Only now download full puzzles
       const puzzlesResponse = await fetch(REMOTE_PUZZLES_URL);
       const puzzlesData = await puzzlesResponse.json();
 
@@ -52,4 +57,25 @@ export async function fetchRemoteVersion(): Promise<number> {
 export async function loadLocalVersion(): Promise<number> {
   const localVersionString = await AsyncStorage.getItem(VERSION_KEY);
   return localVersionString ? parseInt(localVersionString, 10) : 0;
+}
+
+export async function resetToFallbackPuzzles() {
+  try {
+    const fileExists = await FileSystem.getInfoAsync(PUZZLES_FILE);
+    if (fileExists.exists) {
+      await FileSystem.deleteAsync(PUZZLES_FILE);
+      console.log('🗑️ Downloaded puzzles file removed.');
+    }
+    
+    await AsyncStorage.removeItem(VERSION_KEY);
+    await AsyncStorage.removeItem(UPDATED_KEY);
+    console.log('🔄 Reset to fallback puzzles.');
+    
+    if (onPuzzlesResetCallback) {
+      onPuzzlesResetCallback();
+    }
+  } catch (error) {
+    console.error('❌ Failed to reset puzzles:', error);
+    throw error;
+  }
 }
