@@ -14,7 +14,6 @@ const PuzzleBoard = () => {
   const {
     currentPuzzleId,
     puzzlesState,
-    setCurrentPuzzle,
     goToNextPuzzle,
     goToPreviousPuzzle,
   } = useTangoStore();
@@ -27,7 +26,6 @@ const PuzzleBoard = () => {
   const isSolved = puzzlesState[currentPuzzleId]?.isSolved ?? false;
   const elapsed = usePuzzleTimer(currentPuzzleId, isSolved);
 
-  // Use puzzle logic hook for validation and game mechanics
   const {
     handleCellPress,
     getCellValue,

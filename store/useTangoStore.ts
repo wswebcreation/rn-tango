@@ -275,6 +275,7 @@ export const useTangoStore = create<TangoStore>()(
             [puzzleId]: {
               ...currentState,
               isSolved: false,
+              totalTime: 0,
               boardState: createBoardState(),
               startTime: null,
               isTimerRunning: false,

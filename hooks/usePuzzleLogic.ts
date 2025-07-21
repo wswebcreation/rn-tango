@@ -339,6 +339,7 @@ export function usePuzzleLogic(puzzle: Puzzle | undefined, puzzleId: number) {
 
   useEffect(() => {
     const currentTimeouts = errorTimeouts.current;
+    
     currentTimeouts.forEach((timeout, coordinate) => {
       if (!immediateErrors.has(coordinate)) {
         clearTimeout(timeout);
@@ -347,24 +348,30 @@ export function usePuzzleLogic(puzzle: Puzzle | undefined, puzzleId: number) {
     });
 
     setDelayedErrors(prev => {
-      const next = new Set(prev);
-      let hasChanges = false;
+      const next = new Set<string>();
       prev.forEach(coordinate => {
-        if (!immediateErrors.has(coordinate)) {
-          next.delete(coordinate);
-          hasChanges = true;
+        if (immediateErrors.has(coordinate)) {
+          next.add(coordinate);
         }
       });
-      return hasChanges ? next : prev;
+      return next;
     });
 
     immediateErrors.forEach(coordinate => {
-      if (!currentTimeouts.has(coordinate) && !delayedErrors.has(coordinate)) {
-        const timeout = setTimeout(() => {
-          setDelayedErrors(prev => new Set(prev).add(coordinate));
-          currentTimeouts.delete(coordinate);
-        }, 2000);
-        currentTimeouts.set(coordinate, timeout);
+      if (!currentTimeouts.has(coordinate)) {
+        setDelayedErrors(prev => {
+          if (prev.has(coordinate)) {
+            return prev;
+          }
+          
+          const timeout = setTimeout(() => {
+            setDelayedErrors(current => new Set(current).add(coordinate));
+            currentTimeouts.delete(coordinate);
+          }, 2000);
+          currentTimeouts.set(coordinate, timeout);
+          
+          return prev;
+        });
       }
     });
 
@@ -372,7 +379,7 @@ export function usePuzzleLogic(puzzle: Puzzle | undefined, puzzleId: number) {
       currentTimeouts.forEach(timeout => clearTimeout(timeout));
       currentTimeouts.clear();
     };
-  }, [immediateErrors, delayedErrors]);
+  }, [immediateErrors]);
 
   const getCellErrors = delayedErrors;
 
