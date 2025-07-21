@@ -1,11 +1,11 @@
-import React from 'react';
-import { FlatList, StyleSheet, Text } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-// import { useQueensStore } from '@/store/useQueensStore';
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/Colors';
 import { usePuzzles } from '@/hooks/usePuzzles';
+import { useTangoStore } from '@/store/useTangoStore';
 import { useRouter } from 'expo-router';
+import React from 'react';
+import { FlatList, StyleSheet, Text } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 const formatTime = (seconds: number): string => {
   const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
@@ -13,9 +13,10 @@ const formatTime = (seconds: number): string => {
   const s = String(seconds % 60).padStart(2, '0');
   return `${h}:${m}:${s}`;
 };
+
 const LevelsScreen = () => {
   const { puzzles, loading } = usePuzzles();
-  // const { setCurrentPuzzle, solvedPuzzles, currentPuzzleId, puzzlesState } = useQueensStore();
+  const { setCurrentPuzzle, solvedPuzzles, puzzlesState, currentPuzzleId } = useTangoStore();
   const router = useRouter();
 
   if (loading) {
@@ -34,34 +35,34 @@ const LevelsScreen = () => {
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={styles.list}
         renderItem={({ item, index }) => {
-          // const isSolved = solvedPuzzles.includes(item.id);
-          const isSolved = false;
-          // const isCurrent = currentPuzzleId === item.id;
-          const isCurrent = false;
+          const isSolved = solvedPuzzles.includes(item.id);
+          const isCurrent = currentPuzzleId === item.id;
           const previousId = puzzles[index - 1]?.id;
-          // const previousSolved = index === 0 || solvedPuzzles.includes(previousId);
-          const previousSolved = index === 0 || false;
+          const previousSolved = index === 0 || solvedPuzzles.includes(previousId);
           const locked = !previousSolved;
-          // const totalTime = puzzlesState[item.id]?.totalTime ?? 0;
-          const totalTime = 0;
-          const labelText = `#${item.id} ${isSolved ? `🎉 (${formatTime(totalTime)})` : locked ? '🔒' : ''}`
+          const puzzleState = puzzlesState[item.id];
+          const totalTime = puzzleState?.totalTime ?? 0;
+          const hasTime = totalTime > 0 || isSolved;
+          const timeDisplay = hasTime ? ` (${formatTime(totalTime)})` : '';
+          const statusIcon = isSolved ? '🎉' : hasTime ? '⏱️' : '';
+          const labelText = `#${item.id} ${statusIcon}${timeDisplay}${locked ? ' 🔒' : ''}`;
 
           return (
-              <Button
+            <Button
               label={labelText}
               disabled={locked}
-                containerStyle={[
-                  styles.levelButton,
-                  isCurrent && styles.currentLevel,
-                  locked && styles.lockedLevel,
-                  isSolved && styles.solved,
-                ]}
-                onPress={() => {
-                  // setCurrentPuzzle(item.id);
-                  // router.push('/play');
-                }}
-                textStyle={styles.levelText}
-              />
+              containerStyle={[
+                styles.levelButton,
+                isCurrent && styles.currentLevel,
+                locked && styles.lockedLevel,
+                isSolved && styles.solved,
+              ]}
+              onPress={() => {
+                setCurrentPuzzle(item.id);
+                router.push('/play');
+              }}
+              textStyle={styles.levelText}
+            />
           );
         }}
       />
@@ -71,42 +72,40 @@ const LevelsScreen = () => {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
     backgroundColor: Colors.blueBg,
-    padding: 20
+    flex: 1,
   },
   title: {
     color: Colors.text,
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 16
+    textAlign: 'center',
+    marginVertical: 20,
   },
   list: {
-    paddingBottom: 100
+    padding: 20,
   },
   levelButton: {
-    alignItems: 'flex-start',
-    padding: 16,
     marginBottom: 12,
-    // backgroundColor: Colors.purple,
-    borderRadius: 8,
     width: '100%',
-    borderWidth: 0,
+    alignItems: 'flex-start',
   },
   currentLevel: {
-    // backgroundColor: Colors.deepPurple,
+    backgroundColor: Colors.active,
+    borderColor: Colors.active,
   },
   lockedLevel: {
     backgroundColor: Colors.inactive,
-  },
-  levelText: {
-    color: Colors.white,
-    fontSize: 16,
-    fontWeight: 'normal',
+    borderColor: Colors.inactive,
   },
   solved: {
-    // backgroundColor: Colors.deepPurple,
-  }
+    backgroundColor: Colors.active,
+    borderColor: Colors.active,
+  },
+  levelText: {
+    color: Colors.activeText,
+    textAlign: 'left',
+  },
 });
 
 export default LevelsScreen;

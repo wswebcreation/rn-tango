@@ -1,40 +1,29 @@
+import { Button } from '@/components/ui/Button';
+import { PuzzleGrid } from '@/components/ui/PuzzleGrid';
+import { Colors } from '@/constants/Colors';
+import { usePuzzle } from '@/hooks/usePuzzle';
+import { usePuzzleTimer } from '@/hooks/usePuzzleTimer';
+import { useTangoStore } from '@/store/useTangoStore';
+import { CellData, Constraint, Direction } from '@/types/tango';
 import React from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-// import { useQueensStore } from '@/store/useQueensStore';
-import { PuzzleGrid } from '@/components/ui/PuzzleGrid';
-import { Colors } from '@/constants/Colors';
-// import { usePuzzleLogic } from '@/hooks/usePuzzleLogic';
-import { usePuzzle } from '@/hooks/usePuzzle';
-// import { usePuzzleSolvedStatus } from '@/hooks/usePuzzleSolvedStatus';
-// import { usePuzzleTimer } from '@/hooks/usePuzzleTimer';
-
-import { Button } from '@/components/ui/Button';
-import { CellData, Constraint, Direction } from '@/types/tango';
 
 const PuzzleBoard = () => {
-  // const {
-  //   clearBoard,
-  //   currentPuzzleId,
-  //   goToNextPuzzle,
-  //   goToPreviousPuzzle,
-  //   puzzlesState,
-  //   undoLastMove
-  // } = useQueensStore();
-  const goToNextPuzzle = () => {};
-  const goToPreviousPuzzle = () => { };
-  const toggleCell = () => { };
-  // const { puzzle, loading } = usePuzzle(currentPuzzleId);
-  const { puzzle, loading } = usePuzzle(1);
+  const {
+    currentPuzzleId,
+    puzzlesState,
+    setCurrentPuzzle,
+    markPuzzleSolved,
+  } = useTangoStore();
+  
+  const { puzzle, loading } = usePuzzle(currentPuzzleId);
   const screenWidth = Dimensions.get('window').width;
   const padding = 10;
   const boardSize = puzzle?.size ?? 8;
   const cellSize = Math.floor((screenWidth - padding * 2) / boardSize);
-  // const isSolved = puzzlesState[currentPuzzleId]?.isSolved ?? false;
-  const isSolved = false;
-  // const { toggleCell, swipeCell, startSwipeBatch, endSwipeBatch, cellStates, regionErrors } = usePuzzleLogic(puzzle, currentPuzzleId);
-  // const elapsed = usePuzzleTimer(currentPuzzleId, isSolved);
-  // usePuzzleSolvedStatus(puzzle, isSolved);
+  const isSolved = puzzlesState[currentPuzzleId]?.isSolved ?? false;
+  const elapsed = usePuzzleTimer(currentPuzzleId, isSolved);
 
   const formatTime = (seconds: number) => {
     const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
@@ -42,10 +31,9 @@ const PuzzleBoard = () => {
     const s = String(seconds % 60).padStart(2, '0');
     return `${h}:${m}:${s}`;
   };
-  // const solvedButtonClass = isSolved ? styles.solvedButton : {};
-  const solvedButtonClass = {};
-  // const solvedButtonTextClass = isSolved ? styles.solvedButtonText : {};
-  const solvedButtonTextClass = {};
+
+  const solvedButtonClass = isSolved ? styles.solvedButton : {};
+  const solvedButtonTextClass = isSolved ? styles.solvedButtonText : {};
   
   if (loading || !puzzle) {
     return (
@@ -102,19 +90,19 @@ const PuzzleBoard = () => {
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.header}>🌑/☀️</Text>
-      <Text style={styles.title}>Tango #{/*currentPuzzleId*/}</Text>
-      <Text style={styles.timer}>⏱️ {/*formatTime(elapsed)*/}</Text>
+      <Text style={styles.title}>Tango #{currentPuzzleId}</Text>
+      <Text style={styles.timer}>⏱️ {formatTime(elapsed)}</Text>
 
       <PuzzleGrid 
         board={board}
         onCellPress={handleCellPress}
       />
 
-      {/* {isSolved && (
+      {isSolved && (
         <View style={styles.overlay} pointerEvents="none">
           <Text style={styles.solved}>Puzzle solved!</Text>
         </View>
-      )} */}
+      )}
 
       <View style={styles.buttonContainer}>
         <Button
@@ -135,7 +123,9 @@ const PuzzleBoard = () => {
         containerStyle={[styles.nextButton, solvedButtonClass ]}
         textStyle={solvedButtonTextClass}
         label={isSolved ? '🎊 Next puzzle 🎊' : '← Previous puzzle'}
-        onPress={isSolved ? goToNextPuzzle : goToPreviousPuzzle}
+        onPress={() => {
+          // Navigation logic will be implemented later
+        }}
       />
     </SafeAreaView>
   );

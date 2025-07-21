@@ -59,3 +59,25 @@ export type ConstraintTextProps = {
   constraintFontSize: number;
   constraintHeightWidth: number;
 };
+
+export type PuzzleState = {
+  isSolved: boolean;
+  totalTime: number;
+  startTime: number | null;
+  isTimerRunning: boolean;
+};
+
+export type TangoStore = {
+  currentPuzzleId: number;
+  puzzlesState: Record<number, PuzzleState>;
+  solvedPuzzles: number[];
+  
+  // Actions
+  setCurrentPuzzle: (puzzleId: number) => void;
+  startTimer: (puzzleId: number) => void;
+  stopTimer: (puzzleId: number) => void;
+  pauseTimer: (puzzleId: number) => void;
+  resumeTimer: (puzzleId: number) => void;
+  markPuzzleSolved: (puzzleId: number) => void;
+  resetPuzzleState: (puzzleId: number) => void;
+};
