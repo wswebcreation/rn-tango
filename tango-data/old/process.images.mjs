@@ -1,17 +1,17 @@
+import { intToRGBA, rgbaToInt } from "@jimp/utils";
 import { Jimp } from 'jimp';
-import { recognize } from 'node-tesseract-ocr';
 
 const files = [
     'thumbnails/tango-001.png',
-    'thumbnails/tango-002.png',
-    'thumbnails/tango-003.png',
-    'thumbnails/tango-004.png',
-    'thumbnails/tango-005.png',
-    'thumbnails/tango-006.png',
-    'thumbnails/tango-007.png',
-    'thumbnails/tango-008.png',
-    'thumbnails/tango-009.png',
-    'thumbnails/tango-010.png',
+    // 'thumbnails/tango-002.png',
+    // 'thumbnails/tango-003.png',
+    // 'thumbnails/tango-004.png',
+    // 'thumbnails/tango-005.png',
+    // 'thumbnails/tango-006.png',
+    // 'thumbnails/tango-007.png',
+    // 'thumbnails/tango-008.png',
+    // 'thumbnails/tango-009.png',
+    // 'thumbnails/tango-010.png',
 ]
 
 // const files = readdirSync('thumbnails/').map(file => `thumbnails/${file}`);
@@ -92,31 +92,37 @@ function getCropData(puzzleNumber, width, height) {
     return { x, y, w, h };
 }
 
-function extractTextFromAlto(altoContent) {
-    const regex = /<String[^>]*CONTENT="([^"]+)"[^>]*>/g
-    let match
-    const textArray = []
+async function drawHighlightedWords({ filePath, highlights }) {
+    try {
+        const image = await Jimp.read(filePath)
+        const highlightColor = { r: 57, g: 170, b: 86, a: 0.5 }
 
-    while ((match = regex.exec(altoContent)) !== null) {
-        textArray.push(match[1])
+        highlights.forEach(({ left, right, top, bottom }) => {
+            const width = right - left
+            const height = bottom - top
+
+            // Apply the semi-transparent highlight
+            for (let y = top; y < top + height; y++) {
+                for (let x = left; x < left + width; x++) {
+                    // Get the current pixel color
+                    const currentColor = image.getPixelColor(x, y)
+                    const rgba = intToRGBA(currentColor)
+                    // Calculate new color values using simple alpha blending
+                    const newR = (highlightColor.r * highlightColor.a) + (rgba.r * (1 - highlightColor.a))
+                    const newG = (highlightColor.g * highlightColor.a) + (rgba.g * (1 - highlightColor.a))
+                    const newB = (highlightColor.b * highlightColor.a) + (rgba.b * (1 - highlightColor.a))
+                    const newA = rgba.a // Use original alpha to maintain image integrity
+
+                    // Set the new pixel color
+                    image.setPixelColor(rgbaToInt(newR, newG, newB, newA), x, y)
+                }
+            }
+        })
+
+        await image.write(filePath)
+    } catch (error) {
+        console.log('Failed to highlight words on image:', error)
     }
-
-    return textArray.join(' ')
-}
-
-async function ocrImage(fileName) {
-    const result = await recognize(fileName, {
-        // lang: language,
-        oem: 1,
-        // https://github.com/tesseract-ocr/tesseract/blob/master/doc/tesseract.1.asc
-        psm: 13,
-        presets: ['alto'],
-    })
-    const text = extractTextFromAlto(result)
-
-    console.log(text);
-
-    return result;
 }
 
 function drawGrid(image, width, height) {
@@ -148,10 +154,10 @@ for (const file of files) {
     const { x, y, w, h } = getCropData(puzzleNumber, width, height);
     const croppedImage = image.crop({x, y, w, h});
     croppedImage.greyscale();
-    croppedImage.contrast(0.5);
+    croppedImage.contrast(1);
     
-    drawGrid(croppedImage, w, h);
+    // drawGrid(croppedImage, w, h);
     
     await croppedImage.write(`./cropped/${fileName}`);
-    // const ocrResult = await ocrImage(`./cropped/${fileName}`);
+    
 }

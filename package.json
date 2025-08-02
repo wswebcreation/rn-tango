@@ -6,6 +6,8 @@
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
     "download-thumbnails": "node ./tango-data/download-thumbnails.js",
+    "process-images": "npx ts-node ./tango-data/process.images.ts",
+    "process-images:watch": "nodemon --exec \"npx ts-node ./tango-data/process.images.ts\" --watch ./tango-data/process.images.ts",
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
@@ -17,6 +19,7 @@
     "@react-navigation/bottom-tabs": "^7.3.10",
     "@react-navigation/elements": "^2.3.8",
     "@react-navigation/native": "^7.1.6",
+    "@u4/opencv4nodejs": "^7.1.2",
     "expo": "~53.0.20",
     "expo-blur": "~14.1.5",
     "expo-constants": "~17.1.7",
@@ -45,12 +48,13 @@
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@types/react": "~19.0.10",
+    "@wdio/ocr-service": "^2.2.7",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~9.2.0",
     "jimp": "^1.6.0",
-    "node-tesseract-ocr": "^2.2.1",
-    "typescript": "~5.8.3",
-    "xml2js": "^0.6.2"
+    "nodemon": "^3.1.10",
+    "ts-node": "^10.9.2",
+    "typescript": "~5.8.3"
   },
   "private": true
 }
