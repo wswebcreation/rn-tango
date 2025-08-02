@@ -37,3 +37,8 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+
+tango-data/orc-images/
+tango-data/grey/
+tango-data/detected/
+tango-data/cropped/
