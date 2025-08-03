@@ -6,6 +6,20 @@ import getData from '/Users/wimselles/Git/games/tango/node_modules/@wdio/ocr-ser
 
 // Debug flag - set to true to enable detailed logging
 const DEBUG = false;
+const processedImagesFolder = './tango-data/processed-images';
+const croppedImagesFolder = `${processedImagesFolder}/1. cropped`;
+const ocrImagesFolder = `${processedImagesFolder}/2a. ocr`;
+const undoDetectionFailedImagesFolder = `${processedImagesFolder}/2b. undo-detection-failed`;
+const greyImagesFolder = `${processedImagesFolder}/3. grey`;
+const gridDetectedImagesFolder = `${processedImagesFolder}/4a. grid-detected`;
+const gridFailedImagesFolder = `${processedImagesFolder}/4b. grid-failed`;  
+
+// Helper function to ensure directory exists
+function ensureDirectoryExists(dirPath: string): void {
+    if (!existsSync(dirPath)) {
+        mkdirSync(dirPath, { recursive: true });
+    }
+}
 
 // const files = [
 //     './tango-data/thumbnails/tango-001.png',
@@ -502,10 +516,8 @@ async function drawGridLinesAndSave(image: any, horizontalGrid: HorizontalGridDe
     }
     
     // Ensure the detected folder exists
-    const detectedFolder = './tango-data/processed-images/grid-detected';
-    if (!existsSync(detectedFolder)) {
-        mkdirSync(detectedFolder, { recursive: true });
-    }
+    const detectedFolder = gridDetectedImagesFolder;
+    ensureDirectoryExists(detectedFolder);
     
     // Save the image with detected lines
     const outputFileName = `tango-detected-${puzzleNumber.toString().padStart(3, '0')}.png`;
@@ -518,14 +530,15 @@ async function drawGridLinesAndSave(image: any, horizontalGrid: HorizontalGridDe
 async function processImages(): Promise<void> {
     for (const file of files) {
         try {
+            // 1. Start with cropping the image based on default bounds
+            ensureDirectoryExists(croppedImagesFolder);
+
             const fileName = file.split('/').pop();
             console.log('\n🔎 Processing', fileName);
-            
+    
             const image = await Jimp.read(file);
             const { width, height } = image.bitmap;
             const puzzleNumber = parseInt(fileName!.split('-')[1].split('.')[0]);
-            // const { x, y, w, h } = getCropData(puzzleNumber, width, height);
-
             const croppedImage = image.crop({ 
                 x: width * 0.3, 
                 y: height * 0.13, 
@@ -533,22 +546,23 @@ async function processImages(): Promise<void> {
                 h: height * 0.8 
             });
             
-            await croppedImage.write(`./tango-data/processed-images/cropped/${fileName}`);
-
-            // Now use the visual module to get the Undo text bounds and crop the image from there
+            await croppedImage.write(`${croppedImagesFolder}/${fileName}`);
+            
+            // 2. Use the @wdio/ocr module to get the Undo text bounds and crop the image from there
+            ensureDirectoryExists(ocrImagesFolder);
             const browser = await remote({ capabilities: { browserName: 'stub' }, automationProtocol: './protocol-stub.js' })
             const options = {
                 contrast: 0.25,
                 isTesseractAvailable: true,
                 language: 'eng',
-                ocrImagesPath: './tango-data/processed-images/ocr-images/',
+                ocrImagesPath: ocrImagesFolder,
                 haystack: { 
                     x: 0, 
                     y: croppedImage.bitmap.height*0.5, 
                     width: croppedImage.bitmap.width, 
                     height: croppedImage.bitmap.height,
                 },
-                cliFile: readFileSync(`./tango-data/processed-images/cropped/${fileName}`).toString('base64')
+                cliFile: readFileSync(`${croppedImagesFolder}/${fileName}`).toString('base64')
             }
             
             try {
@@ -562,19 +576,23 @@ async function processImages(): Promise<void> {
                         w: croppedImage.bitmap.width, 
                         h: top- (bottom-top)
                     })
-                    await croppedImage.write(`./tango-data/processed-images/cropped/${fileName}`)
+                    await croppedImage.write(`${croppedImagesFolder}/${fileName}`)
                 } else {
                     console.log(`❌ No '/undo|unde/i' word found for puzzle ${puzzleNumber}`);
+                    ensureDirectoryExists(undoDetectionFailedImagesFolder);
+                    await croppedImage.write(`${undoDetectionFailedImagesFolder}/${fileName}`);
                 }
             } catch (ocrError) {
                 console.error(`❌ OCR processing failed for ${fileName}:`, ocrError);
             }
 
+            // 3. Convert the cropped image to greyscale and save it
+            ensureDirectoryExists(greyImagesFolder);
             const greyImage = croppedImage
                 .greyscale()
                 .contrast(0.1);
             
-            await greyImage.write(`./tango-data/processed-images/grey/${fileName}`);
+            await greyImage.write(`${greyImagesFolder}/${fileName}`);
             
             // Detect horizontal and vertical grid lines
             let horizontalGrid = detectHorizontalGridLines(greyImage);
@@ -601,10 +619,8 @@ async function processImages(): Promise<void> {
             } else {
                 
                 // Save failed detection to grid-failed folder
-                const failedFolder = './tango-data/processed-images/grid-failed';
-                if (!existsSync(failedFolder)) {
-                    mkdirSync(failedFolder, { recursive: true });
-                }
+                const failedFolder = gridFailedImagesFolder;
+                ensureDirectoryExists(failedFolder);
                 await greyImage.write(`${failedFolder}/${fileName}`);
                 console.log(`❌ Saved failed detection: ${failedFolder}/${fileName}`);
             }
@@ -616,14 +632,6 @@ async function processImages(): Promise<void> {
     }
 }
 
-// Remove the complex findGridBounds and cropGrid functions - they're not needed
-// The getCropData function already provides the correct cropping coordinates
-
-/**
- * End
- */
-
-// Execute the function if this file is run directly
 if (require.main === module) {
     processImages().catch(error => { if (DEBUG) console.error(error); });
 }
