@@ -5,7 +5,7 @@ import { remote } from 'webdriverio';
 import getData from '/Users/wimselles/Git/games/tango/node_modules/@wdio/ocr-service/dist/utils/getData.js';
 
 // Debug flag - set to true to enable detailed logging
-const DEBUG = false;
+const DEBUG = true;
 const processedImagesFolder = './tango-data/processed-images';
 const croppedImagesFolder = `${processedImagesFolder}/1. cropped`;
 const ocrImagesFolder = `${processedImagesFolder}/2a. ocr`;
@@ -55,6 +55,7 @@ const files = [
 ];
 
 // const files = readdirSync('tango-data/thumbnails/').map(file => `tango-data/thumbnails/${file}`);
+
 
 interface HorizontalGridDetection {
     topLine: {
@@ -137,7 +138,84 @@ function detectHorizontalGridLines(image: any): HorizontalGridDetection | null {
                 
                 if (isGridColor) {
                     if (lineStartX === -1) {
-                        lineStartX = x; // Start of line
+                        // Check if this might be a thick background area followed by actual grid (image 013 pattern)
+                        let thickCount = 0;
+                        let hasWhiteGap = false;
+                        let actualGridStart = -1;
+                        
+                        // For debugging image 013, check specific coordinates
+                        if (DEBUG && y === 4 && x === 71) {
+                            console.log(`🔍 Debugging y=4: x=${x}, checking for pattern...`);
+                            // Check pixel values from x=70 to x=90 to understand the pattern
+                            let pixelDebug = '';
+                            for (let debugX = 70; debugX <= 90; debugX++) {
+                                const debugGrey = getGreyscaleValue(image, debugX, y);
+                                const isGrid = debugGrey >= MIN_GRID_COLOR && debugGrey <= MAX_GRID_COLOR;
+                                pixelDebug += `x${debugX}:${debugGrey}${isGrid ? '✓' : '✗'} `;
+                            }
+                            console.log(`🔍 Pixel values y=4: ${pixelDebug}`);
+                        }
+                        
+                        // Count consecutive grid pixels from this position
+                        for (let checkX = x; checkX < width && thickCount < 20; checkX++) {
+                            const checkGrey = getGreyscaleValue(image, checkX, y);
+                            if (checkGrey >= MIN_GRID_COLOR && checkGrey <= MAX_GRID_COLOR) {
+                                thickCount++;
+                            } else {
+                                break;
+                            }
+                        }
+                        
+                        if (DEBUG && y === 4 && x === 71) {
+                            console.log(`🔍 At x=71, y=4: thickCount=${thickCount}, looking for pattern...`);
+                        }
+                        
+                        // Check for pattern: isolated grid pixel + gap + substantial grid line (image 013 case)
+                        if (thickCount <= 3) { // If we only found 1-3 grid pixels, look for gap + substantial grid
+                            // Look for gap after this small grid area
+                            let gapStart = x + thickCount;
+                            let gapSize = 0;
+                            
+                            // Count the gap size
+                            for (let checkX = gapStart; checkX < width && gapSize < 20; checkX++) {
+                                const checkGrey = getGreyscaleValue(image, checkX, y);
+                                if (checkGrey < MIN_GRID_COLOR || checkGrey > MAX_GRID_COLOR) {
+                                    gapSize++;
+                                } else {
+                                    break; // Found grid color again
+                                }
+                            }
+                            
+                            // If there's a significant gap (5+ pixels), look for substantial grid after it
+                            if (gapSize >= 5) {
+                                let gridRestartX = gapStart + gapSize;
+                                let substantialCount = 0;
+                                
+                                // Count consecutive grid pixels after the gap
+                                for (let checkX = gridRestartX; checkX < width && substantialCount < 10; checkX++) {
+                                    const checkGrey = getGreyscaleValue(image, checkX, y);
+                                    if (checkGrey >= MIN_GRID_COLOR && checkGrey <= MAX_GRID_COLOR) {
+                                        substantialCount++;
+                                    } else {
+                                        break;
+                                    }
+                                }
+                                
+                                // If we found substantial grid (3+ pixels) after the gap, use that as start
+                                if (substantialCount >= 3) {
+                                    actualGridStart = gridRestartX;
+                                    if (DEBUG) console.log(`🔍 Found isolated pixel pattern: ${thickCount}px at x=${x}, gap=${gapSize}px, substantial grid ${substantialCount}px at x=${gridRestartX}`);
+                                }
+                            }
+                        }
+                        
+                        // If we found the image 013 pattern, use the actual grid start
+                        if (actualGridStart !== -1) {
+                            lineStartX = actualGridStart;
+                            if (DEBUG) console.log(`🔧 Detected background pattern, skipping from x=${x} to actual grid at x=${actualGridStart}`);
+                        } else {
+                            lineStartX = x; // Normal case
+                        }
                     }
                     lineEndX = x; // Extend line
                     consecutiveNonGridPixels = 0; // Reset gap counter
