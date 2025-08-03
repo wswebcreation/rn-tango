@@ -1,38 +1,41 @@
 // import { intToRGBA, rgbaToInt } from "@jimp/utils";
-import { existsSync, mkdirSync, readFileSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync } from 'fs';
 import { Jimp } from 'jimp';
 import { remote } from 'webdriverio';
 import getData from '/Users/wimselles/Git/games/tango/node_modules/@wdio/ocr-service/dist/utils/getData.js';
 
-const files = [
-    './tango-data/thumbnails/tango-001.png',
-    './tango-data/thumbnails/tango-002.png',
-    './tango-data/thumbnails/tango-003.png',
-    './tango-data/thumbnails/tango-004.png',
-    './tango-data/thumbnails/tango-005.png',
-    './tango-data/thumbnails/tango-006.png',
-    './tango-data/thumbnails/tango-007.png',
-    './tango-data/thumbnails/tango-008.png',
-    './tango-data/thumbnails/tango-009.png',
-    './tango-data/thumbnails/tango-010.png',
-    // The bad images where undo can't be found
-    // './tango-data/thumbnails/tango-166.png',
-    // './tango-data/thumbnails/tango-191.png',
-    // './tango-data/thumbnails/tango-193.png',
-    // './tango-data/thumbnails/tango-194.png',
-    // './tango-data/thumbnails/tango-195.png',
-    // './tango-data/thumbnails/tango-196.png',
-    // './tango-data/thumbnails/tango-197.png',
-    // './tango-data/thumbnails/tango-199.png',
-    // './tango-data/thumbnails/tango-202.png',
-    // './tango-data/thumbnails/tango-204.png',
-    // './tango-data/thumbnails/tango-218.png',
-    // './tango-data/thumbnails/tango-229.png',
-    // './tango-data/thumbnails/tango-262.png',
-    // './tango-data/thumbnails/tango-278.png',
-];
+// Debug flag - set to true to enable detailed logging
+const DEBUG = false;
 
-// const files = readdirSync('tango-data/thumbnails/').map(file => `tango-data/thumbnails/${file}`);
+// const files = [
+//     './tango-data/thumbnails/tango-001.png',
+//     // './tango-data/thumbnails/tango-002.png',
+//     // './tango-data/thumbnails/tango-003.png',
+//     // './tango-data/thumbnails/tango-004.png',
+//     // './tango-data/thumbnails/tango-005.png',
+//     // './tango-data/thumbnails/tango-006.png',
+//     // './tango-data/thumbnails/tango-007.png',
+//     // './tango-data/thumbnails/tango-008.png',
+//     // './tango-data/thumbnails/tango-009.png',
+//     // './tango-data/thumbnails/tango-010.png',
+//     // The bad images where undo can't be found
+//     // './tango-data/thumbnails/tango-166.png',
+//     // './tango-data/thumbnails/tango-191.png',
+//     // './tango-data/thumbnails/tango-193.png',
+//     // './tango-data/thumbnails/tango-194.png',
+//     // './tango-data/thumbnails/tango-195.png',
+//     // './tango-data/thumbnails/tango-196.png',
+//     // './tango-data/thumbnails/tango-197.png',
+//     // './tango-data/thumbnails/tango-199.png',
+//     // './tango-data/thumbnails/tango-202.png',
+//     // './tango-data/thumbnails/tango-204.png',
+//     // './tango-data/thumbnails/tango-218.png',
+//     // './tango-data/thumbnails/tango-229.png',
+//     // './tango-data/thumbnails/tango-262.png',
+//     // './tango-data/thumbnails/tango-278.png',
+// ];
+
+const files = readdirSync('tango-data/thumbnails/').map(file => `tango-data/thumbnails/${file}`);
 
 interface HorizontalGridDetection {
     topLine: {
@@ -141,7 +144,7 @@ function detectHorizontalGridLines(image: any): HorizontalGridDetection | null {
                 if (lineWidth >= MIN_LINE_WIDTH && !isFullWidth) {
                     const thickness = measureLineThickness(lineStartX, lineEndX, y);
                     if (thickness <= MAX_LINE_THICKNESS) {
-                        console.log(`✅ Found valid line: y=${y}, x=${lineStartX}-${lineEndX}, width=${lineWidth}px, thickness=${thickness}px`);
+                        if (DEBUG) console.log(`✅ Found valid horizontal line: y=${y}, x=${lineStartX}-${lineEndX}, width=${lineWidth}px, thickness=${thickness}px`);
                         return {
                             y: y,
                             startX: lineStartX,
@@ -183,7 +186,7 @@ function detectHorizontalGridLines(image: any): HorizontalGridDetection | null {
         return thickness;
     }
     
-    console.log(`🔍 Starting grid line search:`);
+    if (DEBUG) console.log(`🔍 Starting grid line search:`);
     
     // Find top line (search in first 25% of image)
     const topLine = findHorizontalLine(0, SEARCH_AREA_HEIGHT, 'down');
@@ -199,7 +202,7 @@ function detectHorizontalGridLines(image: any): HorizontalGridDetection | null {
         if (widthDifference <= maxAllowedDifference) {
             const gridHeight = bottomLine.y - topLine.y;
             
-            console.log(`Found matching grid lines: top at y=${topLine.y} (${topLine.width}px), bottom at y=${bottomLine.y} (${bottomLine.width}px), height=${gridHeight}px`);
+            if (DEBUG) console.log(`Found matching horizontal grid lines: top at y=${topLine.y} (${topLine.width}px), bottom at y=${bottomLine.y} (${bottomLine.width}px), height=${gridHeight}px`);
             
             return {
                 topLine: {
@@ -289,7 +292,7 @@ function detectVerticalGridLines(image: any): VerticalGridDetection | null {
                 if (lineHeight >= MIN_LINE_HEIGHT && !isFullHeight) {
                     const thickness = measureVerticalLineThickness(lineStartY, lineEndY, x);
                     if (thickness <= MAX_LINE_THICKNESS) {
-                        console.log(`✅ Found valid vertical line: x=${x}, y=${lineStartY}-${lineEndY}, height=${lineHeight}px, thickness=${thickness}px`);
+                        if (DEBUG) console.log(`✅ Found valid vertical line: x=${x}, y=${lineStartY}-${lineEndY}, height=${lineHeight}px, thickness=${thickness}px`);
                         return {
                             x: x,
                             startY: lineStartY,
@@ -331,7 +334,7 @@ function detectVerticalGridLines(image: any): VerticalGridDetection | null {
         return thickness;
     }
     
-    console.log(`🔍 Starting vertical grid line search:`);
+    if (DEBUG) console.log(`🔍 Starting vertical grid line search:`);
     
     // Find left line (search in first 25% of image)
     const leftLine = findVerticalLine(0, SEARCH_AREA_WIDTH, 'right');
@@ -347,7 +350,7 @@ function detectVerticalGridLines(image: any): VerticalGridDetection | null {
         if (heightDifference <= maxAllowedDifference) {
             const gridWidth = rightLine.x - leftLine.x;
             
-            console.log(`Found matching vertical grid lines: left at x=${leftLine.x} (${leftLine.height}px), right at x=${rightLine.x} (${rightLine.height}px), width=${gridWidth}px`);
+            if (DEBUG) console.log(`Found matching vertical grid lines: left at x=${leftLine.x} (${leftLine.height}px), right at x=${rightLine.x} (${rightLine.height}px), width=${gridWidth}px`);
             
             return {
                 leftLine: {
@@ -458,7 +461,7 @@ async function drawGridLinesAndSave(image: any, horizontalGrid: HorizontalGridDe
                 imageWithLines.setPixelColor(transparentGreen, x, y + 1);
             }
         }
-        console.log(`Drew top line at y=${y} from x=${startX} to x=${endX}`);
+                 if (DEBUG) console.log(`Drew top line at y=${y} from x=${startX} to x=${endX}`);
     }
     
     if (horizontalGrid?.bottomLine) {
@@ -470,7 +473,7 @@ async function drawGridLinesAndSave(image: any, horizontalGrid: HorizontalGridDe
                 imageWithLines.setPixelColor(transparentGreen, x, y - 1);
             }
         }
-        console.log(`Drew bottom line at y=${y} from x=${startX} to x=${endX}`);
+                 if (DEBUG) console.log(`Drew bottom line at y=${y} from x=${startX} to x=${endX}`);
     }
     
     // Draw vertical lines if detected
@@ -483,7 +486,7 @@ async function drawGridLinesAndSave(image: any, horizontalGrid: HorizontalGridDe
                 imageWithLines.setPixelColor(transparentGreen, x + 1, y);
             }
         }
-        console.log(`Drew left line at x=${x} from y=${startY} to y=${endY}`);
+        if (DEBUG) console.log(`Drew left line at x=${x} from y=${startY} to y=${endY}`);
     }
     
     if (verticalGrid?.rightLine) {
@@ -495,14 +498,13 @@ async function drawGridLinesAndSave(image: any, horizontalGrid: HorizontalGridDe
                 imageWithLines.setPixelColor(transparentGreen, x - 1, y);
             }
         }
-        console.log(`Drew right line at x=${x} from y=${startY} to y=${endY}`);
+        if (DEBUG) console.log(`Drew right line at x=${x} from y=${startY} to y=${endY}`);
     }
     
     // Ensure the detected folder exists
-    const detectedFolder = '/Users/wimselles/Git/games/tango/tango-data/detected';
+    const detectedFolder = './tango-data/processed-images/grid-detected';
     if (!existsSync(detectedFolder)) {
         mkdirSync(detectedFolder, { recursive: true });
-        console.log(`Created directory: ${detectedFolder}`);
     }
     
     // Save the image with detected lines
@@ -510,14 +512,14 @@ async function drawGridLinesAndSave(image: any, horizontalGrid: HorizontalGridDe
     const outputPath = `${detectedFolder}/${outputFileName}`;
     
     await imageWithLines.write(outputPath);
-    console.log(`✅ Successfully saved image with detected lines: ${outputPath}`);
+    if (DEBUG) console.log(`✅ Successfully saved image with detected lines: ${outputPath}`);
 }
 
 async function processImages(): Promise<void> {
     for (const file of files) {
         try {
             const fileName = file.split('/').pop();
-            console.log('processing', fileName);
+            console.log('\n🔎 Processing', fileName);
             
             const image = await Jimp.read(file);
             const { width, height } = image.bitmap;
@@ -531,7 +533,7 @@ async function processImages(): Promise<void> {
                 h: height * 0.8 
             });
             
-            await croppedImage.write(`./tango-data/cropped/${fileName}`);
+            await croppedImage.write(`./tango-data/processed-images/cropped/${fileName}`);
 
             // Now use the visual module to get the Undo text bounds and crop the image from there
             const browser = await remote({ capabilities: { browserName: 'stub' }, automationProtocol: './protocol-stub.js' })
@@ -539,19 +541,18 @@ async function processImages(): Promise<void> {
                 contrast: 0.25,
                 isTesseractAvailable: true,
                 language: 'eng',
-                ocrImagesPath: '/Users/wimselles/Git/games/tango/tango-data/orc-images',
+                ocrImagesPath: './tango-data/processed-images/ocr-images/',
                 haystack: { 
                     x: 0, 
                     y: croppedImage.bitmap.height*0.5, 
                     width: croppedImage.bitmap.width, 
                     height: croppedImage.bitmap.height,
                 },
-                cliFile: readFileSync(`./tango-data/cropped/${fileName}`).toString('base64')
+                cliFile: readFileSync(`./tango-data/processed-images/cropped/${fileName}`).toString('base64')
             }
             
             try {
                 const { words } = await getData(browser, options)
-                // console.log("words = ", words)
                 const undoWord = words.find(word => /undo|unde/i.test(word.text));
                 if (undoWord) {
                     const { top, bottom } = undoWord.bbox;
@@ -561,20 +562,19 @@ async function processImages(): Promise<void> {
                         w: croppedImage.bitmap.width, 
                         h: top- (bottom-top)
                     })
-                    await croppedImage.write(`./tango-data/cropped/${fileName}`)
+                    await croppedImage.write(`./tango-data/processed-images/cropped/${fileName}`)
                 } else {
-                    console.log(`No undo word found for puzzle ${puzzleNumber}`)
+                    console.log(`❌ No '/undo|unde/i' word found for puzzle ${puzzleNumber}`);
                 }
             } catch (ocrError) {
-                console.error(`OCR processing failed for ${fileName}:`, ocrError);
-                console.log(`Continuing with next image...`);
+                console.error(`❌ OCR processing failed for ${fileName}:`, ocrError);
             }
 
             const greyImage = croppedImage
                 .greyscale()
                 .contrast(0.1);
             
-            await greyImage.write(`./tango-data/grey/${fileName}`);
+            await greyImage.write(`./tango-data/processed-images/grey/${fileName}`);
             
             // Detect horizontal and vertical grid lines
             let horizontalGrid = detectHorizontalGridLines(greyImage);
@@ -582,24 +582,31 @@ async function processImages(): Promise<void> {
             
             // Fallback logic: derive missing lines from found ones (since it's a square grid)
             if (horizontalGrid && !verticalGrid) {
-                console.log(`🔄 Deriving vertical lines from horizontal grid`);
+                if (DEBUG) console.log(`🔄 Deriving vertical lines from horizontal grid`);
                 verticalGrid = deriveVerticalFromHorizontal(horizontalGrid);
             } else if (verticalGrid && !horizontalGrid) {
-                console.log(`🔄 Deriving horizontal lines from vertical grid`);
+                if (DEBUG) console.log(`🔄 Deriving horizontal lines from vertical grid`);
                 horizontalGrid = deriveHorizontalFromVertical(verticalGrid);
             }
             
             if (horizontalGrid || verticalGrid) {
-                console.log(`Grid detected for ${fileName}:`);
+                console.log(`✅ Grid detected for: ${fileName}.\n`);
                 if (horizontalGrid) {
-                    console.log(`  Horizontal:`, horizontalGrid);
+                    if (DEBUG) console.log(`  Horizontal:`, horizontalGrid);
                 }
                 if (verticalGrid) {
-                    console.log(`  Vertical:`, verticalGrid);
+                    if (DEBUG) console.log(`  Vertical:`, verticalGrid);
                 }
                 await drawGridLinesAndSave(greyImage, horizontalGrid, verticalGrid, puzzleNumber);
             } else {
-                console.log(`Could not detect any grid lines for ${fileName}`);
+                
+                // Save failed detection to grid-failed folder
+                const failedFolder = './tango-data/processed-images/grid-failed';
+                if (!existsSync(failedFolder)) {
+                    mkdirSync(failedFolder, { recursive: true });
+                }
+                await greyImage.write(`${failedFolder}/${fileName}`);
+                console.log(`❌ Saved failed detection: ${failedFolder}/${fileName}`);
             }
             
         } catch (error) {
@@ -618,5 +625,5 @@ async function processImages(): Promise<void> {
 
 // Execute the function if this file is run directly
 if (require.main === module) {
-    processImages().catch(console.error);
+    processImages().catch(error => { if (DEBUG) console.error(error); });
 }
