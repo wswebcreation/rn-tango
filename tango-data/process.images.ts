@@ -98,9 +98,253 @@ function getGreyscaleValue(image: any, x: number, y: number): number {
 }
 
 /**
- * Detects horizontal grid lines according to specifications
+ * Simplified: Only detect the top horizontal line (primary approach)
  */
-function detectHorizontalGridLines(image: any): HorizontalGridDetection | null {
+function detectTopHorizontalLine(image: any): any {
+    const { width, height } = image.bitmap;
+    
+    // Grid line color range
+    const MIN_GRID_COLOR = 230;
+    const MAX_GRID_COLOR = 254;
+    const MIN_LINE_WIDTH = Math.floor(width * 0.5); // 50% of image width
+    const MAX_LINE_THICKNESS = 5;
+    const SEARCH_AREA_HEIGHT = Math.floor(height * 0.25); // Search top 25%
+    
+    // Look for top line in first 25% of image
+    for (let y = 3; y < SEARCH_AREA_HEIGHT; y++) {
+        let lineStartX = -1;
+        let lineEndX = -1;
+        let consecutiveNonGridPixels = 0;
+        const MAX_GAP = 15;
+        
+        for (let x = 0; x < width; x++) {
+            const greyValue = getGreyscaleValue(image, x, y);
+            const isGridColor = greyValue >= MIN_GRID_COLOR && greyValue <= MAX_GRID_COLOR;
+            
+            if (isGridColor) {
+                if (lineStartX === -1) {
+                    // Check for isolated pixel pattern (image 013 case)
+                    let thickCount = 0;
+                    for (let checkX = x; checkX < width && thickCount < 20; checkX++) {
+                        const checkGrey = getGreyscaleValue(image, checkX, y);
+                        if (checkGrey >= MIN_GRID_COLOR && checkGrey <= MAX_GRID_COLOR) {
+                            thickCount++;
+                        } else {
+                            break;
+                        }
+                    }
+                    
+                    // Pattern: isolated pixel + gap + substantial grid
+                    if (thickCount <= 3) {
+                        let gapStart = x + thickCount;
+                        let gapSize = 0;
+                        
+                        for (let checkX = gapStart; checkX < width && gapSize < 20; checkX++) {
+                            const checkGrey = getGreyscaleValue(image, checkX, y);
+                            if (checkGrey < MIN_GRID_COLOR || checkGrey > MAX_GRID_COLOR) {
+                                gapSize++;
+                            } else {
+                                break;
+                            }
+                        }
+                        
+                        if (gapSize >= 5) {
+                            let gridRestartX = gapStart + gapSize;
+                            let substantialCount = 0;
+                            
+                            for (let checkX = gridRestartX; checkX < width && substantialCount < 10; checkX++) {
+                                const checkGrey = getGreyscaleValue(image, checkX, y);
+                                if (checkGrey >= MIN_GRID_COLOR && checkGrey <= MAX_GRID_COLOR) {
+                                    substantialCount++;
+                                } else {
+                                    break;
+                                }
+                            }
+                            
+                            if (substantialCount >= 3) {
+                                lineStartX = gridRestartX;
+                                if (DEBUG) console.log(`🔍 Found isolated pixel pattern: ${thickCount}px at x=${x}, gap=${gapSize}px, substantial grid ${substantialCount}px at x=${gridRestartX}`);
+                            }
+                        }
+                    }
+                    
+                    if (lineStartX === -1) {
+                        lineStartX = x; // Normal case
+                    }
+                }
+                lineEndX = x;
+                consecutiveNonGridPixels = 0;
+            } else {
+                if (lineStartX !== -1) {
+                    consecutiveNonGridPixels++;
+                    if (consecutiveNonGridPixels >= MAX_GAP) {
+                        break;
+                    }
+                }
+            }
+        }
+        
+        if (lineStartX !== -1) {
+            const lineWidth = lineEndX - lineStartX + 1;
+            const isFullWidth = lineStartX === 0 && lineEndX === width - 1;
+            
+            if (lineWidth >= MIN_LINE_WIDTH && !isFullWidth) {
+                const thickness = measureLineThickness(lineStartX, lineEndX, y);
+                if (thickness <= MAX_LINE_THICKNESS) {
+                    if (DEBUG) console.log(`✅ Found top horizontal line: y=${y}, x=${lineStartX}-${lineEndX}, width=${lineWidth}px, thickness=${thickness}px`);
+                    return {
+                        y: y,
+                        startX: lineStartX,
+                        endX: lineEndX,
+                        width: lineWidth,
+                        thickness: thickness
+                    };
+                }
+            }
+        }
+    }
+    
+    return null;
+}
+
+/**
+ * Measures the thickness of a horizontal line
+ */
+function measureLineThickness(startX: number, endX: number, startY: number): number {
+    // Simple implementation - just return 1 for now
+    // Can be enhanced later if thickness detection is needed
+    return 1;
+}
+
+/**
+ * Creates complete horizontal grid from just the top line using square geometry  
+ */
+function createSquareGridFromTopLine(topLine: any): HorizontalGridDetection {
+    const gridWidth = topLine.endX - topLine.startX;
+    const gridHeight = gridWidth; // Square grid!
+    const bottomY = topLine.y + gridHeight;
+    
+    if (DEBUG) console.log(`📐 Creating square grid from top line: width=${gridWidth}, bottomY=${topLine.y}+${gridHeight}=${bottomY}`);
+    
+    return {
+        topLine: {
+            y: topLine.y,
+            startX: topLine.startX,
+            endX: topLine.endX,
+            width: topLine.width
+        },
+        bottomLine: {
+            y: bottomY,
+            startX: topLine.startX,
+            endX: topLine.endX,
+            width: topLine.width
+        },
+        gridHeight: gridHeight
+    };
+}
+
+/**
+ * Simplified: Only detect the left vertical line (fallback approach)
+ */
+function detectLeftVerticalLine(image: any): any {
+    const { width, height } = image.bitmap;
+    
+    // Grid line color range
+    const MIN_GRID_COLOR = 230;
+    const MAX_GRID_COLOR = 254;
+    const MIN_LINE_HEIGHT = Math.floor(height * 0.5); // 50% of image height
+    const MAX_LINE_THICKNESS = 5;
+    const SEARCH_AREA_WIDTH = Math.floor(width * 0.25); // Search left 25%
+    
+    // Look for left line in first 25% of image width
+    for (let x = 3; x < SEARCH_AREA_WIDTH; x++) {
+        let lineStartY = -1;
+        let lineEndY = -1;
+        let consecutiveNonGridPixels = 0;
+        const MAX_GAP = 15;
+        
+        for (let y = 0; y < height; y++) {
+            const greyValue = getGreyscaleValue(image, x, y);
+            const isGridColor = greyValue >= MIN_GRID_COLOR && greyValue <= MAX_GRID_COLOR;
+            
+            if (isGridColor) {
+                if (lineStartY === -1) {
+                    lineStartY = y; // Start of line
+                }
+                lineEndY = y; // Extend line
+                consecutiveNonGridPixels = 0;
+            } else {
+                if (lineStartY !== -1) {
+                    consecutiveNonGridPixels++;
+                    if (consecutiveNonGridPixels >= MAX_GAP) {
+                        break;
+                    }
+                }
+            }
+        }
+        
+        if (lineStartY !== -1) {
+            const lineHeight = lineEndY - lineStartY + 1;
+            const isFullHeight = lineStartY === 0 && lineEndY === height - 1;
+            
+            if (lineHeight >= MIN_LINE_HEIGHT && !isFullHeight) {
+                const thickness = measureVerticalLineThickness(lineStartY, lineEndY, x);
+                if (thickness <= MAX_LINE_THICKNESS) {
+                    if (DEBUG) console.log(`✅ Found left vertical line: x=${x}, y=${lineStartY}-${lineEndY}, height=${lineHeight}px, thickness=${thickness}px`);
+                    return {
+                        x: x,
+                        startY: lineStartY,
+                        endY: lineEndY,
+                        height: lineHeight,
+                        thickness: thickness
+                    };
+                }
+            }
+        }
+    }
+    
+    return null;
+}
+
+/**
+ * Creates complete vertical grid from just the left line using square geometry
+ */
+function createSquareGridFromLeftLine(leftLine: any): VerticalGridDetection {
+    const gridHeight = leftLine.endY - leftLine.startY;
+    const gridWidth = gridHeight; // Square grid!
+    const rightX = leftLine.x + gridWidth;
+    
+    if (DEBUG) console.log(`📐 Creating square grid from left line: height=${gridHeight}, rightX=${leftLine.x}+${gridWidth}=${rightX}`);
+    
+    return {
+        leftLine: {
+            x: leftLine.x,
+            startY: leftLine.startY,
+            endY: leftLine.endY,
+            height: leftLine.height
+        },
+        rightLine: {
+            x: rightX,
+            startY: leftLine.startY,
+            endY: leftLine.endY,
+            height: leftLine.height
+        },
+        gridWidth: gridWidth
+    };
+}
+
+/**
+ * Measures the thickness of a vertical line
+ */
+function measureVerticalLineThickness(startY: number, endY: number, startX: number): number {
+    // For now, return 1 (can be enhanced later if needed)
+    return 1;
+}
+
+/**
+ * Old complex horizontal detection (keeping for reference but not used)
+ */
+function detectHorizontalGridLines_OLD(image: any): HorizontalGridDetection | null {
     const { width, height } = image.bitmap;
     
     // Grid line color range (expanded to include all variations: #ededed to #fbfbfb and beyond)
@@ -143,19 +387,6 @@ function detectHorizontalGridLines(image: any): HorizontalGridDetection | null {
                         let hasWhiteGap = false;
                         let actualGridStart = -1;
                         
-                        // For debugging image 013, check specific coordinates
-                        if (DEBUG && y === 4 && x === 71) {
-                            console.log(`🔍 Debugging y=4: x=${x}, checking for pattern...`);
-                            // Check pixel values from x=70 to x=90 to understand the pattern
-                            let pixelDebug = '';
-                            for (let debugX = 70; debugX <= 90; debugX++) {
-                                const debugGrey = getGreyscaleValue(image, debugX, y);
-                                const isGrid = debugGrey >= MIN_GRID_COLOR && debugGrey <= MAX_GRID_COLOR;
-                                pixelDebug += `x${debugX}:${debugGrey}${isGrid ? '✓' : '✗'} `;
-                            }
-                            console.log(`🔍 Pixel values y=4: ${pixelDebug}`);
-                        }
-                        
                         // Count consecutive grid pixels from this position
                         for (let checkX = x; checkX < width && thickCount < 20; checkX++) {
                             const checkGrey = getGreyscaleValue(image, checkX, y);
@@ -164,10 +395,6 @@ function detectHorizontalGridLines(image: any): HorizontalGridDetection | null {
                             } else {
                                 break;
                             }
-                        }
-                        
-                        if (DEBUG && y === 4 && x === 71) {
-                            console.log(`🔍 At x=71, y=4: thickCount=${thickCount}, looking for pattern...`);
                         }
                         
                         // Check for pattern: isolated grid pixel + gap + substantial grid line (image 013 case)
@@ -301,6 +528,13 @@ function detectHorizontalGridLines(image: any): HorizontalGridDetection | null {
             
             if (DEBUG) console.log(`Found matching horizontal grid lines: top at y=${topLine.y} (${topLine.width}px), bottom at y=${bottomLine.y} (${bottomLine.width}px), height=${gridHeight}px`);
             
+            // For square grid, calculate bottom line from top line geometry
+            const gridWidth = topLine.endX - topLine.startX;
+            const squareGridHeight = gridWidth; // Perfect square
+            const calculatedBottomY = topLine.y + squareGridHeight;
+            
+            if (DEBUG) console.log(`📐 Square grid: using calculated bottom line Y=${calculatedBottomY} (top=${topLine.y} + width=${gridWidth})`);
+            
             return {
                 topLine: {
                     y: topLine.y,
@@ -309,12 +543,12 @@ function detectHorizontalGridLines(image: any): HorizontalGridDetection | null {
                     width: topLine.width
                 },
                 bottomLine: {
-                    y: bottomLine.y,
-                    startX: bottomLine.startX,
-                    endX: bottomLine.endX,
-                    width: bottomLine.width
+                    y: calculatedBottomY,
+                    startX: topLine.startX,
+                    endX: topLine.endX,
+                    width: topLine.width
                 },
-                gridHeight: gridHeight
+                gridHeight: squareGridHeight
             };
         }
     }
@@ -474,33 +708,33 @@ function detectVerticalGridLines(image: any): VerticalGridDetection | null {
  * Derives vertical grid lines from horizontal grid lines (for square grids)
  */
 function deriveVerticalFromHorizontal(horizontalGrid: HorizontalGridDetection): VerticalGridDetection | null {
-    if (!horizontalGrid.topLine || !horizontalGrid.bottomLine) {
+    if (!horizontalGrid.topLine) {
         return null;
     }
     
-    const { topLine, bottomLine } = horizontalGrid;
+    const { topLine } = horizontalGrid;
     
-    // Use the horizontal line endpoints to define vertical lines
-    const leftX = Math.min(topLine.startX, bottomLine.startX);
-    const rightX = Math.max(topLine.endX, bottomLine.endX);
-    const topY = topLine.y;
-    const bottomY = bottomLine.y;
-    const height = bottomY - topY;
+    // Pure geometric square grid calculation from top line
+    const gridWidth = topLine.endX - topLine.startX;
+    const gridHeight = gridWidth; // Square grid!
+    const bottomY = topLine.y + gridHeight;
+    
+    if (DEBUG) console.log(`📐 Square grid calculation: width=${gridWidth}, height=${gridHeight}, bottomY=${topLine.y}+${gridHeight}=${bottomY}`);
     
     return {
         leftLine: {
-            x: leftX,
-            startY: topY,
+            x: topLine.startX,
+            startY: topLine.y,
             endY: bottomY,
-            height: height
+            height: gridHeight
         },
         rightLine: {
-            x: rightX,
-            startY: topY,
+            x: topLine.endX,
+            startY: topLine.y,
             endY: bottomY,
-            height: height
+            height: gridHeight
         },
-        gridWidth: rightX - leftX
+        gridWidth: gridWidth
     };
 }
 
@@ -677,17 +911,25 @@ async function processImages(): Promise<void> {
             
             await greyImage.write(`${greyImagesFolder}/${fileName}`);
             
-            // Detect horizontal and vertical grid lines
-            let horizontalGrid = detectHorizontalGridLines(greyImage);
-            let verticalGrid = detectVerticalGridLines(greyImage);
+            // Simple approach: detect ONE reference line, calculate everything else geometrically
+            let horizontalGrid = null;
+            let verticalGrid = null;
             
-            // Fallback logic: derive missing lines from found ones (since it's a square grid)
-            if (horizontalGrid && !verticalGrid) {
-                if (DEBUG) console.log(`🔄 Deriving vertical lines from horizontal grid`);
+            // 1. Try to detect top horizontal line (primary approach)
+            const topLine = detectTopHorizontalLine(greyImage);
+            if (topLine) {
+                if (DEBUG) console.log(`✅ Found top line, calculating square grid geometrically`);
+                horizontalGrid = createSquareGridFromTopLine(topLine);
                 verticalGrid = deriveVerticalFromHorizontal(horizontalGrid);
-            } else if (verticalGrid && !horizontalGrid) {
-                if (DEBUG) console.log(`🔄 Deriving horizontal lines from vertical grid`);
-                horizontalGrid = deriveHorizontalFromVertical(verticalGrid);
+            } else {
+                // 2. Fallback: try to detect left vertical line
+                if (DEBUG) console.log(`🔄 Top line failed, trying left vertical line fallback`);
+                const leftLine = detectLeftVerticalLine(greyImage);
+                if (leftLine) {
+                    if (DEBUG) console.log(`✅ Found left line, calculating square grid geometrically`);
+                    verticalGrid = createSquareGridFromLeftLine(leftLine);
+                    horizontalGrid = deriveHorizontalFromVertical(verticalGrid);
+                }
             }
             
             if (horizontalGrid || verticalGrid) {
