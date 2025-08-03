@@ -1,5 +1,5 @@
-import { getGreyscaleValue, measureLineThickness } from '../utils/image-utils';
 import { GridLine } from '../types/grid-types';
+import { getGreyscaleValue, measureLineThickness } from '../utils/image-utils';
 
 const DEBUG = false;
 
