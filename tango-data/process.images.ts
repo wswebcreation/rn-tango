@@ -5,7 +5,8 @@ import { remote } from 'webdriverio';
 import getData from '/Users/wimselles/Git/games/tango/node_modules/@wdio/ocr-service/dist/utils/getData.js';
 
 // Debug flag - set to true to enable detailed logging
-const DEBUG = true;
+const DEBUG = false;
+const OCR = false;
 const processedImagesFolder = './tango-data/processed-images';
 const croppedImagesFolder = `${processedImagesFolder}/1. cropped`;
 const ocrImagesFolder = `${processedImagesFolder}/2a. ocr`;
@@ -13,6 +14,7 @@ const undoDetectionFailedImagesFolder = `${processedImagesFolder}/2b. undo-detec
 const greyImagesFolder = `${processedImagesFolder}/3. grey`;
 const gridDetectedImagesFolder = `${processedImagesFolder}/4a. grid-detected`;
 const gridFailedImagesFolder = `${processedImagesFolder}/4b. grid-failed`;  
+const gridCroppedImagesFolder = `${processedImagesFolder}/5. grid-cropped`;
 
 // Helper function to ensure directory exists
 function ensureDirectoryExists(dirPath: string): void {
@@ -21,37 +23,26 @@ function ensureDirectoryExists(dirPath: string): void {
     }
 }
 
+/**
+ * Logs:
+ * - with OCR and debugging enabled: ~ 105 seconds
+ * - with OCR: no real change
+ * - without OCR: ~ 35 seconds
+ */
+
 const files = [
     './tango-data/thumbnails/tango-001.png',
-    // './tango-data/thumbnails/tango-002.png',
-    // './tango-data/thumbnails/tango-003.png',
-    // './tango-data/thumbnails/tango-004.png',
-    // './tango-data/thumbnails/tango-005.png',
-    // './tango-data/thumbnails/tango-006.png',
-    // './tango-data/thumbnails/tango-007.png',
-    // './tango-data/thumbnails/tango-008.png',
-    // './tango-data/thumbnails/tango-009.png',
-    // './tango-data/thumbnails/tango-010.png',
+    './tango-data/thumbnails/tango-002.png',
+    './tango-data/thumbnails/tango-003.png',
+    './tango-data/thumbnails/tango-004.png',
+    './tango-data/thumbnails/tango-005.png',
+    './tango-data/thumbnails/tango-006.png',
+    './tango-data/thumbnails/tango-007.png',
+    './tango-data/thumbnails/tango-008.png',
+    './tango-data/thumbnails/tango-009.png',
+    './tango-data/thumbnails/tango-010.png',
     // The bad images where undo can't be found
-    './tango-data/thumbnails/tango-013.png',
-    // './tango-data/thumbnails/tango-021.png', // not complete image
-    // './tango-data/thumbnails/tango-027.png',
-    // './tango-data/thumbnails/tango-105.png', // not complete image
-    // './tango-data/thumbnails/tango-134.png', // not complete image
-    // './tango-data/thumbnails/tango-166.png', // undo text, not big bottom
-    // './tango-data/thumbnails/tango-177.png', // undo
-    // './tango-data/thumbnails/tango-180.png', // undo
-    // './tango-data/thumbnails/tango-188.png', // right line
-    // './tango-data/thumbnails/tango-189.png', // undo
-    // './tango-data/thumbnails/tango-191.png', // undo
-    // './tango-data/thumbnails/tango-193.png', // undo
-    // './tango-data/thumbnails/tango-200.png', // not complete image
-    // './tango-data/thumbnails/tango-209.png', // not complete image
-    // './tango-data/thumbnails/tango-218.png', // undo
-    // './tango-data/thumbnails/tango-219.png', // not complete image
-    // './tango-data/thumbnails/tango-220.png', // not complete image
-    // './tango-data/thumbnails/tango-226.png', // not complete image
-    // './tango-data/thumbnails/tango-278.png', // undo
+    // Not 100% correct: 27, 196, 
 ];
 
 // const files = readdirSync('tango-data/thumbnails/').map(file => `tango-data/thumbnails/${file}`);
@@ -344,6 +335,7 @@ function measureVerticalLineThickness(startY: number, endY: number, startX: numb
 /**
  * Old complex horizontal detection (keeping for reference but not used)
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function detectHorizontalGridLines_OLD(image: any): HorizontalGridDetection | null {
     const { width, height } = image.bitmap;
     
@@ -384,7 +376,7 @@ function detectHorizontalGridLines_OLD(image: any): HorizontalGridDetection | nu
                     if (lineStartX === -1) {
                         // Check if this might be a thick background area followed by actual grid (image 013 pattern)
                         let thickCount = 0;
-                        let hasWhiteGap = false;
+                        // let hasWhiteGap = false;
                         let actualGridStart = -1;
                         
                         // Count consecutive grid pixels from this position
@@ -559,6 +551,7 @@ function detectHorizontalGridLines_OLD(image: any): HorizontalGridDetection | nu
 /**
  * Detects vertical grid lines according to specifications
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function detectVerticalGridLines(image: any): VerticalGridDetection | null {
     const { width, height } = image.bitmap;
     
@@ -840,121 +833,153 @@ async function drawGridLinesAndSave(image: any, horizontalGrid: HorizontalGridDe
     const outputFileName = `tango-detected-${puzzleNumber.toString().padStart(3, '0')}.png`;
     const outputPath = `${detectedFolder}/${outputFileName}`;
     
-    await imageWithLines.write(outputPath);
+    if (DEBUG) await imageWithLines.write(outputPath);
     if (DEBUG) console.log(`✅ Successfully saved image with detected lines: ${outputPath}`);
 }
 
 async function processImages(): Promise<void> {
+    const startTime = Date.now();
+    const puzzleNumbersToSkip = [27, 196];
+    let processedImages = 0;
     for (const file of files) {
-        try {
-            // 1. Start with cropping the image based on default bounds
-            ensureDirectoryExists(croppedImagesFolder);
+        const fileName = file.split('/').pop();
+        const puzzleNumber = parseInt(fileName!.split('-')[1].split('.')[0]);
+        let croppedImage = null;
+        let greyImage = null;
+        let gridCroppedImage = null;
 
-            const fileName = file.split('/').pop();
-            console.log('\n🔎 Processing', fileName);
-    
-            const image = await Jimp.read(file);
-            const { width, height } = image.bitmap;
-            const puzzleNumber = parseInt(fileName!.split('-')[1].split('.')[0]);
-            const croppedImage = image.crop({ 
-                x: width * 0.3, 
-                y: height * 0.13, 
-                w: width * 0.4, 
-                h: height * 0.8 
-            });
-            
-            await croppedImage.write(`${croppedImagesFolder}/${fileName}`);
-            
-            // 2. Use the @wdio/ocr module to get the Undo text bounds and crop the image from there
-            ensureDirectoryExists(ocrImagesFolder);
-            const browser = await remote({ capabilities: { browserName: 'stub' }, automationProtocol: './protocol-stub.js' })
-            const options = {
-                contrast: 0.25,
-                isTesseractAvailable: true,
-                language: 'eng',
-                ocrImagesPath: ocrImagesFolder,
-                haystack: { 
-                    x: 0, 
-                    y: croppedImage.bitmap.height*0.5, 
-                    width: croppedImage.bitmap.width, 
-                    height: croppedImage.bitmap.height,
-                },
-                cliFile: readFileSync(`${croppedImagesFolder}/${fileName}`).toString('base64')
-            }
-            
+        if (!puzzleNumbersToSkip.includes(puzzleNumber)) {
             try {
-                const { words } = await getData(browser, options)
-                const undoWord = words.find(word => /undo|unde/i.test(word.text));
-                if (undoWord) {
-                    const { top, bottom } = undoWord.bbox;
-                    croppedImage.crop({
-                        x: 0, 
-                        y: 0, 
-                        w: croppedImage.bitmap.width, 
-                        h: top- (bottom-top)
-                    })
-                    await croppedImage.write(`${croppedImagesFolder}/${fileName}`)
-                } else {
-                    console.log(`❌ No '/undo|unde/i' word found for puzzle ${puzzleNumber}`);
-                    ensureDirectoryExists(undoDetectionFailedImagesFolder);
-                    await croppedImage.write(`${undoDetectionFailedImagesFolder}/${fileName}`);
-                }
-            } catch (ocrError) {
-                console.error(`❌ OCR processing failed for ${fileName}:`, ocrError);
-            }
+                // 1. Start with cropping the image based on default bounds
+                ensureDirectoryExists(croppedImagesFolder);
 
-            // 3. Convert the cropped image to greyscale and save it
-            ensureDirectoryExists(greyImagesFolder);
-            const greyImage = croppedImage
-                .greyscale()
-                .contrast(0.1);
+                console.log('\n🔎 Processing', fileName);
+    
+                const image = await Jimp.read(file);
+                const { width, height } = image.bitmap;
+                croppedImage = image.crop({
+                    x: width * 0.3,
+                    y: height * 0.13,
+                    w: width * 0.4,
+                    h: height * 0.8
+                });
             
-            await greyImage.write(`${greyImagesFolder}/${fileName}`);
+                if (DEBUG) await croppedImage.write(`${croppedImagesFolder}/${fileName}`);
             
-            // Simple approach: detect ONE reference line, calculate everything else geometrically
-            let horizontalGrid = null;
-            let verticalGrid = null;
+                if (OCR) {
+                    // 2. Use the @wdio/ocr module to get the Undo text bounds and crop the image from there
+                    ensureDirectoryExists(ocrImagesFolder);
+                    const browser = await remote({ capabilities: { browserName: 'stub' }, automationProtocol: './protocol-stub.js' })
+                    const options = {
+                        contrast: 0.25,
+                        isTesseractAvailable: true,
+                        language: 'eng',
+                        ocrImagesPath: ocrImagesFolder,
+                        haystack: {
+                            x: 0,
+                            y: croppedImage.bitmap.height * 0.5,
+                            width: croppedImage.bitmap.width,
+                            height: croppedImage.bitmap.height,
+                        },
+                        cliFile: readFileSync(`${croppedImagesFolder}/${fileName}`).toString('base64')
+                    }
             
-            // 1. Try to detect top horizontal line (primary approach)
-            const topLine = detectTopHorizontalLine(greyImage);
-            if (topLine) {
-                if (DEBUG) console.log(`✅ Found top line, calculating square grid geometrically`);
-                horizontalGrid = createSquareGridFromTopLine(topLine);
-                verticalGrid = deriveVerticalFromHorizontal(horizontalGrid);
-            } else {
-                // 2. Fallback: try to detect left vertical line
-                if (DEBUG) console.log(`🔄 Top line failed, trying left vertical line fallback`);
-                const leftLine = detectLeftVerticalLine(greyImage);
-                if (leftLine) {
-                    if (DEBUG) console.log(`✅ Found left line, calculating square grid geometrically`);
-                    verticalGrid = createSquareGridFromLeftLine(leftLine);
-                    horizontalGrid = deriveHorizontalFromVertical(verticalGrid);
+                    try {
+                        const { words } = await getData(browser, options)
+                        const undoWord = words.find(word => /undo|unde/i.test(word.text));
+                        if (undoWord) {
+                            const { top, bottom } = undoWord.bbox;
+                            croppedImage.crop({
+                                x: 0,
+                                y: 0,
+                                w: croppedImage.bitmap.width,
+                                h: top - (bottom - top)
+                            })
+                            if (DEBUG) await croppedImage.write(`${croppedImagesFolder}/${fileName}`)
+                        } else {
+                            console.log(`❌ No '/undo|unde/i' word found for puzzle ${puzzleNumber}`);
+                            ensureDirectoryExists(undoDetectionFailedImagesFolder);
+                            if (DEBUG) await croppedImage.write(`${undoDetectionFailedImagesFolder}/${fileName}`);
+                        }
+                    } catch (ocrError) {
+                        console.error(`❌ OCR processing failed for ${fileName}:`, ocrError);
+                    }
                 }
-            }
+
+                // 3. Convert the cropped image to greyscale and save it
+                ensureDirectoryExists(greyImagesFolder);
+                greyImage = croppedImage
+                    .clone()
+                    .greyscale()
+                    .contrast(0.1);
             
-            if (horizontalGrid || verticalGrid) {
-                console.log(`✅ Grid detected for: ${fileName}.\n`);
-                if (horizontalGrid) {
-                    if (DEBUG) console.log(`  Horizontal:`, horizontalGrid);
+                if (DEBUG) await greyImage.write(`${greyImagesFolder}/${fileName}`);
+            
+                // Simple approach: detect ONE reference line, calculate everything else geometrically
+                let horizontalGrid = null;
+                let verticalGrid = null;
+            
+                // 1. Try to detect top horizontal line (primary approach)
+                const topLine = detectTopHorizontalLine(greyImage);
+                if (topLine) {
+                    if (DEBUG) console.log(`✅ Found top line, calculating square grid geometrically`);
+                    horizontalGrid = createSquareGridFromTopLine(topLine);
+                    verticalGrid = deriveVerticalFromHorizontal(horizontalGrid);
+                } else {
+                    // 2. Fallback: try to detect left vertical line
+                    if (DEBUG) console.log(`🔄 Top line failed, trying left vertical line fallback`);
+                    const leftLine = detectLeftVerticalLine(greyImage);
+                    if (leftLine) {
+                        if (DEBUG) console.log(`✅ Found left line, calculating square grid geometrically`);
+                        verticalGrid = createSquareGridFromLeftLine(leftLine);
+                        horizontalGrid = deriveHorizontalFromVertical(verticalGrid);
+                    }
                 }
-                if (verticalGrid) {
-                    if (DEBUG) console.log(`  Vertical:`, verticalGrid);
-                }
-                await drawGridLinesAndSave(greyImage, horizontalGrid, verticalGrid, puzzleNumber);
-            } else {
+            
+                if (horizontalGrid || verticalGrid) {
+                    console.log(`✅ Grid detected for: ${fileName}.\n`);
+                    if (horizontalGrid) {
+                        if (DEBUG) console.log(`  Horizontal:`, horizontalGrid);
+                    }
+                    if (verticalGrid) {
+                        if (DEBUG) console.log(`  Vertical:`, verticalGrid);
+                    }
+                    await drawGridLinesAndSave(greyImage, horizontalGrid, verticalGrid, puzzleNumber);
+                    
+                    // 5. Crop the image based on the detected grid lines
+                    ensureDirectoryExists(gridCroppedImagesFolder);
+                    const topLine = horizontalGrid?.topLine;
+                    const bottomLine = horizontalGrid?.bottomLine;
+                    const leftLine = verticalGrid?.leftLine;
+                    const rightLine = verticalGrid?.rightLine;
+                    const gridWidth = (rightLine?.x || 0) - (leftLine?.x || 0);
+                    const gridHeight = (bottomLine?.y || 0) - (topLine?.y || 0);
+                    const gridX = leftLine?.x || 0;
+                    const gridY = topLine?.y || 0;
+                    gridCroppedImage = await croppedImage
+                        .clone()
+                        .crop({ x: gridX, y: gridY, w: gridWidth, h: gridHeight })
+                    if (DEBUG) await gridCroppedImage.write(`${gridCroppedImagesFolder}/${fileName}`);
+                    processedImages++;
+                } else {
                 
-                // Save failed detection to grid-failed folder
-                const failedFolder = gridFailedImagesFolder;
-                ensureDirectoryExists(failedFolder);
-                await greyImage.write(`${failedFolder}/${fileName}`);
-                console.log(`❌ Saved failed detection: ${failedFolder}/${fileName}`);
-            }
+                    // Save failed detection to grid-failed folder
+                    const failedFolder = gridFailedImagesFolder;
+                    ensureDirectoryExists(failedFolder);
+                    if (DEBUG) await greyImage.write(`${failedFolder}/${fileName}`);
+                    console.log(`❌ Saved failed detection: ${failedFolder}/${fileName}`);
+                }
             
-        } catch (error) {
-            console.error(`Failed to process ${file}:`, error);
-            console.log(`Continuing with next image...`);
+            } catch (error) {
+                console.error(`Failed to process ${file}:`, error);
+                console.log(`Continuing with next image...`);
+            }
         }
     }
+    const endTime = Date.now();
+
+    console.log(`\n🏁 Process completed in ${((endTime - startTime) / 1000).toFixed(2)} seconds`);
+    console.log(`✅ Processed ${processedImages} images`);
 }
 
 if (require.main === module) {
