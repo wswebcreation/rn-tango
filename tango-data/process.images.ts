@@ -1,11 +1,12 @@
 // import { intToRGBA, rgbaToInt } from "@jimp/utils";
-import { existsSync, mkdirSync, readFileSync } from 'fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync } from 'fs';
 import { Jimp } from 'jimp';
 import { remote } from 'webdriverio';
 import getData from '/Users/wimselles/Git/games/tango/node_modules/@wdio/ocr-service/dist/utils/getData.js';
 
 // Debug flag - set to true to enable detailed logging
 const DEBUG = false;
+const DEBUG_SAVE_IMAGES = true;
 const OCR = false;
 const processedImagesFolder = './tango-data/processed-images';
 const croppedImagesFolder = `${processedImagesFolder}/1. cropped`;
@@ -28,24 +29,25 @@ function ensureDirectoryExists(dirPath: string): void {
  * - with OCR and debugging enabled: ~ 105 seconds
  * - with OCR: no real change
  * - without OCR: ~ 35 seconds
+ * - without saving images: ~ 20 seconds
  */
 
-const files = [
-    './tango-data/thumbnails/tango-001.png',
-    './tango-data/thumbnails/tango-002.png',
-    './tango-data/thumbnails/tango-003.png',
-    './tango-data/thumbnails/tango-004.png',
-    './tango-data/thumbnails/tango-005.png',
-    './tango-data/thumbnails/tango-006.png',
-    './tango-data/thumbnails/tango-007.png',
-    './tango-data/thumbnails/tango-008.png',
-    './tango-data/thumbnails/tango-009.png',
-    './tango-data/thumbnails/tango-010.png',
-    // The bad images where undo can't be found
-    // Not 100% correct: 27, 196, 
-];
+// const files = [
+//     './tango-data/thumbnails/tango-001.png',
+//     './tango-data/thumbnails/tango-002.png',
+//     './tango-data/thumbnails/tango-003.png',
+//     './tango-data/thumbnails/tango-004.png',
+//     './tango-data/thumbnails/tango-005.png',
+//     './tango-data/thumbnails/tango-006.png',
+//     './tango-data/thumbnails/tango-007.png',
+//     './tango-data/thumbnails/tango-008.png',
+//     './tango-data/thumbnails/tango-009.png',
+//     './tango-data/thumbnails/tango-010.png',
+//     // The bad images where undo can't be found
+//     // Not 100% correct: 27, 196, 
+// ];
 
-// const files = readdirSync('tango-data/thumbnails/').map(file => `tango-data/thumbnails/${file}`);
+const files = readdirSync('tango-data/thumbnails/').map(file => `tango-data/thumbnails/${file}`);
 
 
 interface HorizontalGridDetection {
@@ -833,7 +835,7 @@ async function drawGridLinesAndSave(image: any, horizontalGrid: HorizontalGridDe
     const outputFileName = `tango-detected-${puzzleNumber.toString().padStart(3, '0')}.png`;
     const outputPath = `${detectedFolder}/${outputFileName}`;
     
-    if (DEBUG) await imageWithLines.write(outputPath);
+    if (DEBUG_SAVE_IMAGES) await imageWithLines.write(outputPath);
     if (DEBUG) console.log(`✅ Successfully saved image with detected lines: ${outputPath}`);
 }
 
@@ -864,7 +866,7 @@ async function processImages(): Promise<void> {
                     h: height * 0.8
                 });
             
-                if (DEBUG) await croppedImage.write(`${croppedImagesFolder}/${fileName}`);
+                if (DEBUG_SAVE_IMAGES) await croppedImage.write(`${croppedImagesFolder}/${fileName}`);
             
                 if (OCR) {
                     // 2. Use the @wdio/ocr module to get the Undo text bounds and crop the image from there
@@ -913,7 +915,7 @@ async function processImages(): Promise<void> {
                     .greyscale()
                     .contrast(0.1);
             
-                if (DEBUG) await greyImage.write(`${greyImagesFolder}/${fileName}`);
+                if (DEBUG_SAVE_IMAGES) await greyImage.write(`${greyImagesFolder}/${fileName}`);
             
                 // Simple approach: detect ONE reference line, calculate everything else geometrically
                 let horizontalGrid = null;
@@ -959,14 +961,14 @@ async function processImages(): Promise<void> {
                     gridCroppedImage = await croppedImage
                         .clone()
                         .crop({ x: gridX, y: gridY, w: gridWidth, h: gridHeight })
-                    if (DEBUG) await gridCroppedImage.write(`${gridCroppedImagesFolder}/${fileName}`);
+                    if (DEBUG_SAVE_IMAGES) await gridCroppedImage.write(`${gridCroppedImagesFolder}/${fileName}`);
                     processedImages++;
                 } else {
                 
                     // Save failed detection to grid-failed folder
                     const failedFolder = gridFailedImagesFolder;
                     ensureDirectoryExists(failedFolder);
-                    if (DEBUG) await greyImage.write(`${failedFolder}/${fileName}`);
+                    if (DEBUG_SAVE_IMAGES) await greyImage.write(`${failedFolder}/${fileName}`);
                     console.log(`❌ Saved failed detection: ${failedFolder}/${fileName}`);
                 }
             
