@@ -1,5 +1,5 @@
 // import { intToRGBA, rgbaToInt } from "@jimp/utils";
-import { existsSync, mkdirSync, readdirSync, readFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync } from 'fs';
 import { Jimp } from 'jimp';
 import { remote } from 'webdriverio';
 import getData from '/Users/wimselles/Git/games/tango/node_modules/@wdio/ocr-service/dist/utils/getData.js';
@@ -21,35 +21,40 @@ function ensureDirectoryExists(dirPath: string): void {
     }
 }
 
-// const files = [
-//     './tango-data/thumbnails/tango-001.png',
-//     // './tango-data/thumbnails/tango-002.png',
-//     // './tango-data/thumbnails/tango-003.png',
-//     // './tango-data/thumbnails/tango-004.png',
-//     // './tango-data/thumbnails/tango-005.png',
-//     // './tango-data/thumbnails/tango-006.png',
-//     // './tango-data/thumbnails/tango-007.png',
-//     // './tango-data/thumbnails/tango-008.png',
-//     // './tango-data/thumbnails/tango-009.png',
-//     // './tango-data/thumbnails/tango-010.png',
-//     // The bad images where undo can't be found
-//     // './tango-data/thumbnails/tango-166.png',
-//     // './tango-data/thumbnails/tango-191.png',
-//     // './tango-data/thumbnails/tango-193.png',
-//     // './tango-data/thumbnails/tango-194.png',
-//     // './tango-data/thumbnails/tango-195.png',
-//     // './tango-data/thumbnails/tango-196.png',
-//     // './tango-data/thumbnails/tango-197.png',
-//     // './tango-data/thumbnails/tango-199.png',
-//     // './tango-data/thumbnails/tango-202.png',
-//     // './tango-data/thumbnails/tango-204.png',
-//     // './tango-data/thumbnails/tango-218.png',
-//     // './tango-data/thumbnails/tango-229.png',
-//     // './tango-data/thumbnails/tango-262.png',
-//     // './tango-data/thumbnails/tango-278.png',
-// ];
+const files = [
+    './tango-data/thumbnails/tango-001.png',
+    // './tango-data/thumbnails/tango-002.png',
+    // './tango-data/thumbnails/tango-003.png',
+    // './tango-data/thumbnails/tango-004.png',
+    // './tango-data/thumbnails/tango-005.png',
+    // './tango-data/thumbnails/tango-006.png',
+    // './tango-data/thumbnails/tango-007.png',
+    // './tango-data/thumbnails/tango-008.png',
+    // './tango-data/thumbnails/tango-009.png',
+    // './tango-data/thumbnails/tango-010.png',
+    // The bad images where undo can't be found
+    './tango-data/thumbnails/tango-013.png',
+    // './tango-data/thumbnails/tango-021.png', // not complete image
+    // './tango-data/thumbnails/tango-027.png',
+    // './tango-data/thumbnails/tango-105.png', // not complete image
+    // './tango-data/thumbnails/tango-134.png', // not complete image
+    // './tango-data/thumbnails/tango-166.png', // undo text, not big bottom
+    // './tango-data/thumbnails/tango-177.png', // undo
+    // './tango-data/thumbnails/tango-180.png', // undo
+    // './tango-data/thumbnails/tango-188.png', // right line
+    // './tango-data/thumbnails/tango-189.png', // undo
+    // './tango-data/thumbnails/tango-191.png', // undo
+    // './tango-data/thumbnails/tango-193.png', // undo
+    // './tango-data/thumbnails/tango-200.png', // not complete image
+    // './tango-data/thumbnails/tango-209.png', // not complete image
+    // './tango-data/thumbnails/tango-218.png', // undo
+    // './tango-data/thumbnails/tango-219.png', // not complete image
+    // './tango-data/thumbnails/tango-220.png', // not complete image
+    // './tango-data/thumbnails/tango-226.png', // not complete image
+    // './tango-data/thumbnails/tango-278.png', // undo
+];
 
-const files = readdirSync('tango-data/thumbnails/').map(file => `tango-data/thumbnails/${file}`);
+// const files = readdirSync('tango-data/thumbnails/').map(file => `tango-data/thumbnails/${file}`);
 
 interface HorizontalGridDetection {
     topLine: {
