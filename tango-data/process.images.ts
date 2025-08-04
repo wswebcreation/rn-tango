@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'fs';
+import { readFileSync } from 'fs';
 import { Jimp } from 'jimp';
 import { remote } from 'webdriverio';
 import {
@@ -9,8 +9,9 @@ import {
     detectLeftVerticalLine,
     detectTopHorizontalLine
 } from './grid-detection/index';
+import { detectGridConstraints } from './utils/constraint-detection';
 import { ensureDirectoryExists } from './utils/file-utils';
-import { drawGridLinesAndSave } from './utils/visualization';
+import { drawConstraintDetectionAreas, drawGridLinesAndSave } from './utils/visualization';
 import getData from '/Users/wimselles/Git/games/tango/node_modules/@wdio/ocr-service/dist/utils/getData.js';
 
 // Debug flag - set to true to enable detailed logging
@@ -27,6 +28,7 @@ const greyImagesFolder = `${processedImagesFolder}/3. grey`;
 const gridDetectedImagesFolder = `${processedImagesFolder}/4a. grid-detected`;
 const gridFailedImagesFolder = `${processedImagesFolder}/4b. grid-failed`;  
 const gridCroppedImagesFolder = `${processedImagesFolder}/5. grid-cropped`;
+const constraintsImagesFolder = `${processedImagesFolder}/6. constraints`;
 
 /**
  * Logs:
@@ -36,22 +38,22 @@ const gridCroppedImagesFolder = `${processedImagesFolder}/5. grid-cropped`;
  * - without saving images: ~ 20 seconds
  */
 
-// const files = [
-//     './tango-data/thumbnails/tango-001.png',
-//     // './tango-data/thumbnails/tango-002.png',
-//     // './tango-data/thumbnails/tango-003.png',
-//     // './tango-data/thumbnails/tango-004.png',
-//     // './tango-data/thumbnails/tango-005.png',
-//     // './tango-data/thumbnails/tango-006.png',
-//     // './tango-data/thumbnails/tango-007.png',
-//     // './tango-data/thumbnails/tango-008.png',
-//     // './tango-data/thumbnails/tango-009.png',
-//     // './tango-data/thumbnails/tango-010.png',
-//     // The bad images where undo can't be found
-//     // Not 100% correct: 27, 196, 
-// ];
+const files = [
+    './tango-data/thumbnails/tango-001.png',
+    './tango-data/thumbnails/tango-002.png',
+    // './tango-data/thumbnails/tango-003.png',
+    // './tango-data/thumbnails/tango-004.png',
+    // './tango-data/thumbnails/tango-005.png',
+    // './tango-data/thumbnails/tango-006.png',
+    // './tango-data/thumbnails/tango-007.png',
+    // './tango-data/thumbnails/tango-008.png',
+    // './tango-data/thumbnails/tango-009.png',
+    // './tango-data/thumbnails/tango-010.png',
+    // The bad images where undo can't be found
+    // Not 100% correct: 27, 196, 
+];
 
-const files = readdirSync('tango-data/thumbnails/').map(file => `tango-data/thumbnails/${file}`);
+// const files = readdirSync('tango-data/thumbnails/').map(file => `tango-data/thumbnails/${file}`);
 
 async function processImages(): Promise<void> {
     const startTime = Date.now();
@@ -64,6 +66,7 @@ async function processImages(): Promise<void> {
         let croppedImage = null;
         let greyImage = null;
         let gridCroppedImage = null;
+        let constraintsImage = null;
 
         if (!puzzleNumbersToSkip.includes(puzzleNumber)) {
             try {
@@ -184,6 +187,39 @@ async function processImages(): Promise<void> {
                     ensureDirectoryExists(failedFolder);
                     if (DEBUG_SAVE_IMAGES) await greyImage.write(`${failedFolder}/${fileName}`);
                     console.log(`❌ Saved failed detection: ${failedFolder}/${fileName}`);
+                }
+
+                // 6. The Goal of the following step is that we can determine the x and = symbols
+                // the symbols are on the borders of the grid cropped image in a structure like this:
+                // ["0,0", "0,1","="] => the = is between 0,0 and 0,1
+                // ["0,0","1,0","x"], => the x is between 0,0 and 1,0
+                // We now need to determine the x and = symbols in the grid cropped image and output them to the console per image as a constraints array
+                // The constraints array is an array of arrays, each containing 3 elements: the x and = symbols
+                // The x and = symbols are represented as strings in the format "x,y"
+                // We should determine where there borders are and check per cell if they are x or =, if nothing  then we should proceed to the next
+                if (gridCroppedImage && horizontalGrid && verticalGrid) {
+                    ensureDirectoryExists(constraintsImagesFolder);
+                    constraintsImage = gridCroppedImage
+                        .clone()
+                        .greyscale()
+                        .contrast(1);
+        
+                    if (DEBUG_SAVE_IMAGES) await constraintsImage.write(`${constraintsImagesFolder}/${fileName}`);
+
+                    // Draw constraint detection areas for visualization
+                    await drawConstraintDetectionAreas(constraintsImage, horizontalGrid, verticalGrid, puzzleNumber, constraintsImagesFolder);
+
+                    // Detect constraints on grid borders
+                    const constraints = await detectGridConstraints(constraintsImage, horizontalGrid, verticalGrid, puzzleNumber, constraintsImagesFolder);
+                    
+                    if (constraints.length > 0) {
+                        console.log(`📋 Constraints for ${fileName}:`, constraints);
+                    } else {
+                        console.log(`📋 No constraints detected for ${fileName}`);
+                    }
+                    
+                } else {
+                    if (DEBUG) console.log(`❌ No grid cropped image or grid data found for: ${fileName}`);
                 }
             
             } catch (error) {
