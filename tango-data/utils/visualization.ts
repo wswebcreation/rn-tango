@@ -87,7 +87,7 @@ export async function drawGridLinesAndSave(
  * Draws orange borders on detected symbols on the constraints image
  */
 export async function drawDetectedSymbolsOnAreasImage(
-    detectedAreas: { x: number, y: number, w: number, h: number, symbol: string }[],
+    detectedAreas: { x: number, y: number, w: number, h: number, symbol: string, position?: string }[],
     puzzleNumber: number,
     constraintsImagesFolder: string
 ): Promise<void> {
@@ -137,13 +137,38 @@ export async function drawDetectedSymbolsOnAreasImage(
                 }
             }
             
-            // Draw the detected symbol text below the detection area
+            // Draw the detected symbol and position text below the detection area
             const symbolText = area.symbol.toUpperCase(); // 'X' or '='
             const textStartY = area.y + area.h + 4; // 4 pixels below the detection area
-            const textCenterX = area.x + Math.floor(area.w / 2); // Center the text horizontally
             
-            // Draw simple text using pixel drawing (9x11 bold font)
-            drawSimpleText(baseImage, symbolText, textCenterX, textStartY, orange);
+            // Create combined text in format "5,0-5,1 =" and center it below the box
+            let combinedText = '';
+            if (area.position) {
+                const match = area.position.match(/V(\d+)-(\d+)_R(\d+)|H(\d+)-(\d+)_C(\d+)/);
+                if (match) {
+                    let positionText = '';
+                    if (match[1] !== undefined) {
+                        // Vertical: V0-1_R5 -> "5,0-5,1" (row,col1-row,col2)
+                        const row = match[3];
+                        const col1 = match[1];
+                        const col2 = match[2];
+                        positionText = `${row},${col1}-${row},${col2}`;
+                    } else if (match[4] !== undefined) {
+                        // Horizontal: H2-3_C1 -> "2,1-3,1" (row1,col-row2,col)
+                        const row1 = match[4];
+                        const row2 = match[5];
+                        const col = match[6];
+                        positionText = `${row1},${col}-${row2},${col}`;
+                    }
+                    combinedText = `${positionText} ${symbolText.toLowerCase()}`;
+                }
+            }
+            
+            // Draw combined text centered below the detection area with background box
+            if (combinedText) {
+                const textCenterX = area.x + Math.floor(area.w / 2); // Center horizontally
+                drawPositionTextWithBackground(baseImage, combinedText, textCenterX, textStartY, orange, true); // true for center alignment
+            }
         }
         
         // Save the image with detected symbols
@@ -161,28 +186,28 @@ export async function drawDetectedSymbolsOnAreasImage(
 function drawSimpleText(image: any, text: string, centerX: number, startY: number, color: number): void {
     const char = text.charAt(0); // We only need to draw single character ('X' or '=')
     
-    // Larger 9x11 pixel font patterns with thicker lines
+    // 9x11 pixel font patterns with thinner 1-2 pixel lines
     const fontPatterns: { [key: string]: string[] } = {
         'X': [
-            '■■     ■■',
-            '■■■   ■■■',
-            ' ■■■ ■■■ ',
-            '  ■■■■■  ',
-            '   ■■■   ',
-            '  ■■■■■  ',
-            ' ■■■ ■■■ ',
-            '■■■   ■■■',
-            '■■     ■■'
+            '■       ■',
+            ' ■     ■ ',
+            '  ■   ■  ',
+            '   ■ ■   ',
+            '    ■    ',
+            '   ■ ■   ',
+            '  ■   ■  ',
+            ' ■     ■ ',
+            '■       ■'
         ],
         '=': [
             '         ',
             '■■■■■■■■■',
-            '■■■■■■■■■',
             '         ',
             '         ',
             '         ',
+            '         ',
             '■■■■■■■■■',
-            '■■■■■■■■■',
+            '         ',
             '         '
         ]
     };
@@ -209,4 +234,221 @@ function drawSimpleText(image: any, text: string, centerX: number, startY: numbe
             }
         }
     }
+}
+
+/**
+ * Draws position text using small pixel font (e.g., "5,0-5,1 =")
+ */
+function drawPositionText(image: any, text: string, startX: number, startY: number, color: number, centerAlign: boolean = false): void {
+    // Small 5x7 pixel font patterns for numbers, comma, and dash
+    const fontPatterns: { [key: string]: string[] } = {
+        '0': [
+            '■■■■■',
+            '■   ■',
+            '■   ■',
+            '■   ■',
+            '■   ■',
+            '■   ■',
+            '■■■■■'
+        ],
+        '1': [
+            '  ■  ',
+            ' ■■  ',
+            '  ■  ',
+            '  ■  ',
+            '  ■  ',
+            '  ■  ',
+            '■■■■■'
+        ],
+        '2': [
+            '■■■■■',
+            '    ■',
+            '    ■',
+            '■■■■■',
+            '■    ',
+            '■    ',
+            '■■■■■'
+        ],
+        '3': [
+            '■■■■■',
+            '    ■',
+            '    ■',
+            '■■■■■',
+            '    ■',
+            '    ■',
+            '■■■■■'
+        ],
+        '4': [
+            '■   ■',
+            '■   ■',
+            '■   ■',
+            '■■■■■',
+            '    ■',
+            '    ■',
+            '    ■'
+        ],
+        '5': [
+            '■■■■■',
+            '■    ',
+            '■    ',
+            '■■■■■',
+            '    ■',
+            '    ■',
+            '■■■■■'
+        ],
+        '6': [
+            '■■■■■',
+            '■    ',
+            '■    ',
+            '■■■■■',
+            '■   ■',
+            '■   ■',
+            '■■■■■'
+        ],
+        '7': [
+            '■■■■■',
+            '    ■',
+            '    ■',
+            '    ■',
+            '    ■',
+            '    ■',
+            '    ■'
+        ],
+        '8': [
+            '■■■■■',
+            '■   ■',
+            '■   ■',
+            '■■■■■',
+            '■   ■',
+            '■   ■',
+            '■■■■■'
+        ],
+        '9': [
+            '■■■■■',
+            '■   ■',
+            '■   ■',
+            '■■■■■',
+            '    ■',
+            '    ■',
+            '■■■■■'
+        ],
+        ',': [
+            '     ',
+            '     ',
+            '     ',
+            '     ',
+            '     ',
+            '  ■  ',
+            ' ■   '
+        ],
+        '-': [
+            '     ',
+            '     ',
+            '     ',
+            '■■■■■',
+            '     ',
+            '     ',
+            '     '
+        ],
+        ' ': [
+            '     ',
+            '     ',
+            '     ',
+            '     ',
+            '     ',
+            '     ',
+            '     '
+        ],
+        '=': [
+            '     ',
+            '■■■■■',
+            '     ',
+            '     ',
+            '■■■■■',
+            '     ',
+            '     '
+        ],
+        'x': [
+            '■   ■',
+            ' ■ ■ ',
+            '  ■  ',
+            ' ■ ■ ',
+            '■   ■',
+            '     ',
+            '     '
+        ]
+    };
+    
+    const charWidth = 5;
+    const charSpacing = 1; // 1 pixel spacing between characters
+    
+    // Calculate total text width for center alignment
+    let totalWidth = text.length * charWidth + (text.length - 1) * charSpacing;
+    let currentX = centerAlign ? startX - Math.floor(totalWidth / 2) : startX;
+    
+    for (let i = 0; i < text.length; i++) {
+        const char = text[i];
+        const pattern = fontPatterns[char];
+        
+        if (pattern) {
+            const charHeight = pattern.length;
+            
+            for (let row = 0; row < charHeight; row++) {
+                const line = pattern[row];
+                for (let col = 0; col < line.length; col++) {
+                    if (line[col] === '■') {
+                        const pixelX = currentX + col;
+                        const pixelY = startY + row;
+                        
+                        // Check bounds and draw pixel
+                        if (pixelX >= 0 && pixelX < image.bitmap.width && 
+                            pixelY >= 0 && pixelY < image.bitmap.height) {
+                            image.setPixelColor(color, pixelX, pixelY);
+                        }
+                    }
+                }
+            }
+        }
+        
+        currentX += charWidth + charSpacing; // Move to next character position
+    }
+}
+
+/**
+ * Draws position text with semi-transparent orange background box for better readability
+ */
+function drawPositionTextWithBackground(image: any, text: string, startX: number, startY: number, textColor: number, centerAlign: boolean = false): void {
+    const charWidth = 5;
+    const charSpacing = 1;
+    const textHeight = 7; // Height of our font
+    const padding = 2; // Padding around text
+    
+    // Calculate text dimensions
+    const totalTextWidth = text.length * charWidth + (text.length - 1) * charSpacing;
+    const boxWidth = totalTextWidth + (padding * 2);
+    const boxHeight = textHeight + (padding * 2);
+    
+    // Calculate positions
+    const textStartX = centerAlign ? startX - Math.floor(totalTextWidth / 2) : startX;
+    const boxStartX = textStartX - padding;
+    const boxStartY = startY - padding;
+    
+    // Create semi-transparent orange background - lighter for better contrast
+    const backgroundOrange = 0xFFA50080; // Orange with 50% transparency (0x80 = 128/255)
+    
+    // Draw background box
+    for (let y = 0; y < boxHeight; y++) {
+        for (let x = 0; x < boxWidth; x++) {
+            const pixelX = boxStartX + x;
+            const pixelY = boxStartY + y;
+            
+            if (pixelX >= 0 && pixelX < image.bitmap.width && 
+                pixelY >= 0 && pixelY < image.bitmap.height) {
+                image.setPixelColor(backgroundOrange, pixelX, pixelY);
+            }
+        }
+    }
+    
+    // Draw the text on top of the background
+    drawPositionText(image, text, textStartX, startY, textColor, false); // false since we already calculated position
 } 

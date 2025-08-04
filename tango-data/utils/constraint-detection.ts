@@ -20,7 +20,7 @@ export async function detectGridConstraints(
     constraintsImagesFolder: string
 ): Promise<string[][]> {
     const constraints: string[][] = [];
-    const detectedAreas: { x: number, y: number, w: number, h: number, symbol: string }[] = [];
+    const detectedAreas: { x: number, y: number, w: number, h: number, symbol: string, position?: string }[] = [];
     console.log(`🔍 Starting constraint detection on ${image.bitmap.width}x${image.bitmap.height} image`);
     
     // Calculate grid cell dimensions
@@ -79,7 +79,8 @@ export async function detectGridConstraints(
                         y: cropY,
                         w: cropW,
                         h: cropH,
-                        symbol: verticalSymbol
+                        symbol: verticalSymbol,
+                        position: debugInfo.position
                     });
                 }
             }
@@ -132,7 +133,8 @@ export async function detectGridConstraints(
                         y: cropY,
                         w: cropW,
                         h: cropH,
-                        symbol: horizontalSymbol
+                        symbol: horizontalSymbol,
+                        position: debugInfo.position
                     });
                 }
             }
@@ -153,11 +155,19 @@ export async function detectGridConstraints(
  */
 async function detectSymbolInRegion(region: typeof Jimp.prototype, debugInfo?: { puzzleNumber: number, position: string, cropX: number, cropY: number, constraintsImagesFolder: string }): Promise<string | null> {
     try {
-        // Use Approach 2 (Connected Component Analysis) - best performance
-        const xScore = detectXLinesApproach2(region);
-        const equalsScore = detectEqualsLinesApproach2(region);
+        // Run both approaches for comparison
+        const xScore2 = detectXLinesApproach2(region);
+        const equalsScore2 = detectEqualsLinesApproach2(region);
         
-        console.log(`  X pattern score: ${xScore.toFixed(3)}, = pattern score: ${equalsScore.toFixed(3)}`);
+        const xScore3 = detectXLinesApproach3(region);
+        const equalsScore3 = detectEqualsLinesApproach3(region);
+        
+        console.log(`  Geometric - X: ${xScore2.toFixed(1)}, =: ${equalsScore2.toFixed(1)}`);
+        console.log(`  Template  - X: ${xScore3.toFixed(1)}%, =: ${equalsScore3.toFixed(1)}%`);
+        
+        // Use Approach 3 (Template Matching) as primary - much more accurate!
+        const xScore = xScore3;
+        const equalsScore = equalsScore3;
         
         // DEBUG: Add detailed analysis for the problematic case
         if (debugInfo && debugInfo.position === 'V0-1_R5') {
@@ -170,22 +180,22 @@ async function detectSymbolInRegion(region: typeof Jimp.prototype, debugInfo?: {
             console.log(`    X detailed score: ${detailedXScore}, = detailed score: ${detailedEqualsScore}\n`);
         }
         
-        // Rebalanced decision logic with fair competition between X and =
-        const minConfidence = 50.0;  // Increased minimum score (both algorithms now score higher)
-        const minMargin = 15.0;       // Standard margin for clear decisions
+        // Template matching decision logic (percentage-based scores 0-100)
+        const minConfidence = 30.0;   // Minimum percentage for detection
+        const minMargin = 10.0;        // Minimum percentage difference for clear decision
         const scoreDifference = Math.abs(xScore - equalsScore);
-        console.log(`    Winner: ${xScore > equalsScore ? 'X' : '='}, Diff: ${scoreDifference.toFixed(3)}`)
+        console.log(`    Winner: ${xScore > equalsScore ? 'X' : '='}, Diff: ${scoreDifference.toFixed(1)}%`)
         
         let detectedSymbol: string | null = null;
         
-        // Balanced decision logic - both algorithms now compete fairly
+        // Template matching decision logic - percentage-based
         let adaptiveMargin = minMargin;
         
-        // For very strong competitions, be more decisive
-        if (xScore > 300 && equalsScore > 300) {
-            adaptiveMargin = 10.0; // Smaller margin for very strong competitions
-        } else if (xScore > 200 && equalsScore > 200) {
-            adaptiveMargin = 12.0; // Slightly smaller margin for strong competitions
+        // For strong patterns, be more decisive
+        if (xScore > 80 && equalsScore > 80) {
+            adaptiveMargin = 5.0;  // Smaller margin when both are very confident
+        } else if (xScore > 60 && equalsScore > 60) {
+            adaptiveMargin = 8.0;  // Slightly smaller margin for good patterns
         }
         
         // Require both minimum confidence AND sufficient margin for clear decision
@@ -1096,6 +1106,161 @@ function detectEqualsLinesApproach2(region: typeof Jimp.prototype): number {
     const competitivenessBonus = 100; // Base boost to make = competitive
     
     return totalLineStrength + separateLineBonus + strongHorizontalBonus + competitivenessBonus;
+}
+
+/**
+ * Configuration for template matching approach
+ */
+const TEMPLATE_CONFIG = {
+    contrastMargin: 70,        // How much darker than background for symbol pixels
+    minBackground: 180,        // Minimum expected background brightness (whitish)
+    maxBackground: 255         // Maximum background brightness (pure white)
+};
+
+/**
+ * Template patterns for X and = symbols (9x11 pixels, 1-pixel thick)
+ */
+const TEMPLATE_PATTERNS = {
+    'X': [
+        '■       ■',
+        ' ■     ■ ',
+        '  ■   ■  ',
+        '   ■ ■   ',
+        '    ■    ',
+        '   ■ ■   ',
+        '  ■   ■  ',
+        ' ■     ■ ',
+        '■       ■'
+    ],
+    '=': [
+        '         ',
+        '■■■■■■■■■',
+        '         ',
+        '         ',
+        '         ',
+        '         ',
+        '■■■■■■■■■',
+        '         ',
+        '         '
+    ]
+};
+
+/**
+ * Approach 3: Template Matching with Dynamic Contrast Detection
+ * Uses sliding window to match font patterns with dynamic background detection
+ */
+function detectXLinesApproach3(region: typeof Jimp.prototype): number {
+    return detectTemplateMatch(region, 'X');
+}
+
+function detectEqualsLinesApproach3(region: typeof Jimp.prototype): number {
+    return detectTemplateMatch(region, '=');
+}
+
+/**
+ * Core template matching function with dynamic contrast detection
+ */
+function detectTemplateMatch(region: typeof Jimp.prototype, symbolType: 'X' | '='): number {
+    const width = region.bitmap.width;
+    const height = region.bitmap.height;
+    
+    // Get template pattern
+    const template = TEMPLATE_PATTERNS[symbolType];
+    const templateWidth = 9;
+    const templateHeight = template.length;
+    
+    // Extract template dark pixel positions
+    const templateDarkPixels: {x: number, y: number}[] = [];
+    for (let y = 0; y < templateHeight; y++) {
+        for (let x = 0; x < templateWidth; x++) {
+            if (template[y][x] === '■') {
+                templateDarkPixels.push({x, y});
+            }
+        }
+    }
+    
+    if (templateDarkPixels.length === 0) return 0;
+    
+    // Dynamic background detection from border pixels
+    const backgroundColor = getBorderPixelsAverage(region);
+    
+    // Background validation - skip if not whitish enough
+    if (backgroundColor < TEMPLATE_CONFIG.minBackground) {
+        console.log(`    Template ${symbolType}: Background too dark (${backgroundColor}), skipping`);
+        return 0; // Skip processing for non-white backgrounds
+    }
+    
+    // Calculate contrast threshold
+    const contrastThreshold = backgroundColor - TEMPLATE_CONFIG.contrastMargin;
+    
+    // Sliding window search for best template match
+    let bestMatchScore = 0;
+    const maxPossiblePositions = (width - templateWidth + 1) * (height - templateHeight + 1);
+    
+    for (let startY = 0; startY <= height - templateHeight; startY++) {
+        for (let startX = 0; startX <= width - templateWidth; startX++) {
+            // Check template match at this position
+            let matchedPixels = 0;
+            
+            for (const darkPixel of templateDarkPixels) {
+                const regionX = startX + darkPixel.x;
+                const regionY = startY + darkPixel.y;
+                
+                // Get pixel value from region
+                const pixelIdx = (regionY * width + regionX) * 4;
+                const grayValue = region.bitmap.data[pixelIdx]; // Grayscale value
+                
+                // Check if region pixel is dark enough (matches template dark pixel)
+                if (grayValue < contrastThreshold) {
+                    matchedPixels++;
+                }
+            }
+            
+            // Calculate match percentage for this position
+            const matchPercentage = (matchedPixels / templateDarkPixels.length) * 100;
+            bestMatchScore = Math.max(bestMatchScore, matchPercentage);
+        }
+    }
+    
+    return bestMatchScore;
+}
+
+/**
+ * Calculate average brightness of border pixels (outer ring)
+ */
+function getBorderPixelsAverage(region: typeof Jimp.prototype): number {
+    const width = region.bitmap.width;
+    const height = region.bitmap.height;
+    let sum = 0;
+    let count = 0;
+    
+    // Top and bottom rows
+    for (let x = 0; x < width; x++) {
+        // Top row
+        const topIdx = (0 * width + x) * 4;
+        sum += region.bitmap.data[topIdx];
+        count++;
+        
+        // Bottom row
+        const bottomIdx = ((height - 1) * width + x) * 4;
+        sum += region.bitmap.data[bottomIdx];
+        count++;
+    }
+    
+    // Left and right columns (excluding corners already counted)
+    for (let y = 1; y < height - 1; y++) {
+        // Left column
+        const leftIdx = (y * width + 0) * 4;
+        sum += region.bitmap.data[leftIdx];
+        count++;
+        
+        // Right column
+        const rightIdx = (y * width + (width - 1)) * 4;
+        sum += region.bitmap.data[rightIdx];
+        count++;
+    }
+    
+    return count > 0 ? sum / count : 255; // Default to white if no border pixels
 }
 
 /**
