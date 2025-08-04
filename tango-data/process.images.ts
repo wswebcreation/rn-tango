@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs';
+import { readFileSync, writeFileSync } from 'fs';
 import { Jimp } from 'jimp';
 import { remote } from 'webdriverio';
 import {
@@ -59,6 +59,7 @@ async function processImages(): Promise<void> {
     const startTime = Date.now();
     const puzzleNumbersToSkip = [27, 196];
     let processedImages = 0;
+    const parsedPuzzles: any[] = []; // Collect parsed puzzle data
     
     for (const file of files) {
         const fileName = file.split('/').pop();
@@ -217,6 +218,16 @@ async function processImages(): Promise<void> {
                         console.log(`📋 No constraints detected for ${fileName}`);
                     }
                     
+                    // Collect puzzle data for JSON output
+                    parsedPuzzles.push({
+                        id: puzzleNumber,
+                        size: 6,
+                        prefilled: {}, // Will be added in next phase
+                        constraints: constraints
+                    });
+                    
+                    processedImages++;
+                    
                 } else {
                     if (DEBUG) console.log(`❌ No grid cropped image or grid data found for: ${fileName}`);
                 }
@@ -227,6 +238,18 @@ async function processImages(): Promise<void> {
             }
         }
     }
+    // Generate JSON output file
+    if (parsedPuzzles.length > 0) {
+        // Sort puzzles by ID for consistent output
+        parsedPuzzles.sort((a, b) => a.id - b.id);
+        
+        const jsonOutput = JSON.stringify(parsedPuzzles, null, 4);
+        const outputPath = './app-data/parsed-images.json';
+        
+        writeFileSync(outputPath, jsonOutput, 'utf8');
+        console.log(`\n📄 Generated parsed-images.json with ${parsedPuzzles.length} puzzles: ${outputPath}`);
+    }
+
     const endTime = Date.now();
 
     console.log(`\n🏁 Process completed in ${((endTime - startTime) / 1000).toFixed(2)} seconds`);
