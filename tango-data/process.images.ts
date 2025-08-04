@@ -11,7 +11,7 @@ import {
 } from './grid-detection/index';
 import { detectGridConstraints } from './utils/constraint-detection';
 import { ensureDirectoryExists } from './utils/file-utils';
-import { drawConstraintDetectionAreas, drawGridLinesAndSave } from './utils/visualization';
+import { drawGridLinesAndSave } from './utils/visualization';
 import getData from '/Users/wimselles/Git/games/tango/node_modules/@wdio/ocr-service/dist/utils/getData.js';
 
 // Debug flag - set to true to enable detailed logging
@@ -206,8 +206,7 @@ async function processImages(): Promise<void> {
         
                     if (DEBUG_SAVE_IMAGES) await constraintsImage.write(`${constraintsImagesFolder}/${fileName}`);
 
-                    // Draw constraint detection areas for visualization
-                    await drawConstraintDetectionAreas(constraintsImage, horizontalGrid, verticalGrid, puzzleNumber, constraintsImagesFolder);
+                    
 
                     // Detect constraints on grid borders
                     const constraints = await detectGridConstraints(constraintsImage, horizontalGrid, verticalGrid, puzzleNumber, constraintsImagesFolder);
