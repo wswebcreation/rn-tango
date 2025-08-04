@@ -170,21 +170,22 @@ async function detectSymbolInRegion(region: typeof Jimp.prototype, debugInfo?: {
             console.log(`    X detailed score: ${detailedXScore}, = detailed score: ${detailedEqualsScore}\n`);
         }
         
-        // Enhanced decision logic with confidence and margin requirements
-        const minConfidence = 15.0;  // Minimum score to be considered
-        const minMargin = 10.0;       // Reduced margin for more competitive decisions
+        // Rebalanced decision logic with fair competition between X and =
+        const minConfidence = 50.0;  // Increased minimum score (both algorithms now score higher)
+        const minMargin = 15.0;       // Standard margin for clear decisions
         const scoreDifference = Math.abs(xScore - equalsScore);
         console.log(`    Winner: ${xScore > equalsScore ? 'X' : '='}, Diff: ${scoreDifference.toFixed(3)}`)
         
         let detectedSymbol: string | null = null;
         
-        // Enhanced decision logic with adaptive margin based on score strengths
+        // Balanced decision logic - both algorithms now compete fairly
         let adaptiveMargin = minMargin;
         
-        // For close competitions where both algorithms find reasonable patterns,
-        // use a smaller margin to allow the better one to win
-        if (xScore > 100 && equalsScore > 100) {
-            adaptiveMargin = 5.0; // Smaller margin for strong competitions
+        // For very strong competitions, be more decisive
+        if (xScore > 300 && equalsScore > 300) {
+            adaptiveMargin = 10.0; // Smaller margin for very strong competitions
+        } else if (xScore > 200 && equalsScore > 200) {
+            adaptiveMargin = 12.0; // Slightly smaller margin for strong competitions
         }
         
         // Require both minimum confidence AND sufficient margin for clear decision
@@ -819,9 +820,14 @@ function detectXLinesApproach2(region: typeof Jimp.prototype): number {
     const mainDiagRatio = mainDiagCount / darkPixels.length;
     const antiDiagRatio = antiDiagCount / darkPixels.length;
     
-    // X MUST have pixels on BOTH diagonals (crossing requirement)
-    if (mainDiagRatio < 0.06 || antiDiagRatio < 0.06) { // Lowered threshold to be more inclusive
+    // X MUST have pixels on BOTH diagonals (crossing requirement) - STRICTER
+    if (mainDiagRatio < 0.08 || antiDiagRatio < 0.08) { // Increased from 0.06 to 0.08 for stricter X detection
         return 0; // Not enough diagonal coverage on both sides
+    }
+    
+    // ADDITIONAL REQUIREMENT: X must have substantial diagonal evidence
+    if (diagonalEvidence < 0.3) { // Require at least 30% of pixels to be diagonal
+        return 0; // Not diagonal enough to be an X
     }
     
     // Enhanced scoring that strongly rewards good diagonal crossing patterns
@@ -1056,37 +1062,40 @@ function detectEqualsLinesApproach2(region: typeof Jimp.prototype): number {
         return 0; // Lines too close together - likely single thick line, not = symbol
     }
     
-    // Enhanced scoring that rewards gap tolerance and line quality
+    // MASSIVELY Enhanced scoring to compete with X detection (which scores 200-350)
     let totalLineStrength = 0;
     
     for (const line of horizontalLines) {
-        // Base score from pixel content and effective coverage
-        const pixelScore = line.totalPixels * 3; // Increased weight
-        const spanScore = Math.min(line.effectiveSpan, 15) * 2; // Reward reasonable spans
-        const gapToleranceScore = line.gapTolerance * 15; // Reward good gap handling
+        // Significantly boosted base scoring to compete with X algorithm
+        const pixelScore = line.totalPixels * 12; // Quadrupled from 3 to 12
+        const spanScore = Math.min(line.effectiveSpan, 15) * 8; // Quadrupled from 2 to 8
+        const gapToleranceScore = line.gapTolerance * 25; // Increased from 15 to 25
         
         const lineScore = pixelScore + spanScore + gapToleranceScore;
         totalLineStrength += lineScore;
     }
     
-    // Enhanced bonus system for = detection
+    // MASSIVE bonus system for = detection to compete with X scores
     let separateLineBonus = 0;
     if (horizontalLines.length === 2) {
-        separateLineBonus = 70; // Increased bonus for perfect = pattern
+        separateLineBonus = 150; // Massively increased from 70 to 150
     } else if (horizontalLines.length === 3) {
-        separateLineBonus = 30; // Increased bonus for close-to-perfect pattern
+        separateLineBonus = 80; // Increased from 30 to 80
     }
     
     // Extra bonus for good separation
     if (separation >= height * 0.25) { // Well separated lines
-        separateLineBonus += 40; // Increased from 35
+        separateLineBonus += 80; // Doubled from 40 to 80
     }
     
     // Additional bonus for strong horizontal characteristics
     const avgLineStrength = totalLineStrength / horizontalLines.length;
-    const strongHorizontalBonus = avgLineStrength > 15 ? 25 : 0; // Reward strong horizontal patterns
+    const strongHorizontalBonus = avgLineStrength > 15 ? 60 : 0; // Increased from 25 to 60
     
-    return totalLineStrength + separateLineBonus + strongHorizontalBonus;
+    // NEW: Base competitiveness bonus to ensure = can compete with X
+    const competitivenessBonus = 100; // Base boost to make = competitive
+    
+    return totalLineStrength + separateLineBonus + strongHorizontalBonus + competitivenessBonus;
 }
 
 /**
