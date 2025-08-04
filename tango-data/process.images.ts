@@ -158,7 +158,7 @@ async function processImages(): Promise<void> {
                 }
             
                 if (horizontalGrid || verticalGrid) {
-                    console.log(`✅ Grid detected for: ${fileName}.\n`);
+                    if (DEBUG) console.log(`✅ Grid detected for: ${fileName}.\n`);
                     if (horizontalGrid) {
                         if (DEBUG) console.log(`  Horizontal:`, horizontalGrid);
                     }
@@ -181,7 +181,6 @@ async function processImages(): Promise<void> {
                         .clone()
                         .crop({ x: gridX, y: gridY, w: gridWidth, h: gridHeight })
                     if (DEBUG_SAVE_IMAGES) await gridCroppedImage.write(`${gridCroppedImagesFolder}/${fileName}`);
-                    processedImages++;
                 } else {
                     // Save failed detection to grid-failed folder
                     const failedFolder = gridFailedImagesFolder;
@@ -213,9 +212,9 @@ async function processImages(): Promise<void> {
                     const constraints = await detectGridConstraints(constraintsImage, horizontalGrid, verticalGrid, puzzleNumber, constraintsImagesFolder);
                     
                     if (constraints.length > 0) {
-                        console.log(`📋 Constraints for ${fileName}:`, constraints);
+                        if (DEBUG) console.log(`📋 Constraints for ${fileName}:`, constraints);
                     } else {
-                        console.log(`📋 No constraints detected for ${fileName}`);
+                        if (DEBUG) console.log(`📋 No constraints detected for ${fileName}`);
                     }
                     
                     // Collect puzzle data for JSON output

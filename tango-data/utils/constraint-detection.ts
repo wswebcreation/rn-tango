@@ -8,6 +8,8 @@ import {
 } from './constraint-config';
 import { drawDetectedSymbolsOnAreasImage } from './visualization';
 
+const DEBUG = false;
+
 /**
  * Detects x and = symbols on grid borders
  * Returns array of constraints in format: [["0,0", "0,1", "="], ["0,0", "1,0", "x"]]
@@ -21,7 +23,7 @@ export async function detectGridConstraints(
 ): Promise<string[][]> {
     const constraints: string[][] = [];
     const detectedAreas: { x: number, y: number, w: number, h: number, symbol: string, position?: string }[] = [];
-    console.log(`🔍 Starting constraint detection on ${image.bitmap.width}x${image.bitmap.height} image`);
+    if (DEBUG) console.log(`🔍 Starting constraint detection on ${image.bitmap.width}x${image.bitmap.height} image`);
     
     // Calculate grid cell dimensions
     const gridWidth = verticalGrid.gridWidth;
@@ -65,7 +67,7 @@ export async function detectGridConstraints(
                 };
                 const verticalSymbol = await detectSymbolInRegion(verticalGridRegion, debugInfo);
                 
-                console.log(`🔍 Vertical grid line ${col}-${col+1}, row ${row}: ${verticalSymbol || 'none'}`);
+                if (DEBUG) console.log(`🔍 Vertical grid line ${col}-${col+1}, row ${row}: ${verticalSymbol || 'none'}`);
                 
                 if (verticalSymbol) {
                     constraints.push([
@@ -119,7 +121,7 @@ export async function detectGridConstraints(
                 };
                 const horizontalSymbol = await detectSymbolInRegion(horizontalGridRegion, debugInfo);
                 
-                console.log(`🔍 Horizontal grid line ${row}-${row+1}, col ${col}: ${horizontalSymbol || 'none'}`);
+                if (DEBUG) console.log(`🔍 Horizontal grid line ${row}-${row+1}, col ${col}: ${horizontalSymbol || 'none'}`);
                 
                 if (horizontalSymbol) {
                     constraints.push([
@@ -162,15 +164,15 @@ async function detectSymbolInRegion(region: typeof Jimp.prototype, debugInfo?: {
         const xScore3 = detectXLinesApproach3(region);
         const equalsScore3 = detectEqualsLinesApproach3(region);
         
-        console.log(`  Geometric - X: ${xScore2.toFixed(1)}, =: ${equalsScore2.toFixed(1)}`);
-        console.log(`  Template  - X: ${xScore3.toFixed(1)}%, =: ${equalsScore3.toFixed(1)}%`);
+        if (DEBUG) console.log(`  Geometric - X: ${xScore2.toFixed(1)}, =: ${equalsScore2.toFixed(1)}`);
+        if (DEBUG) console.log(`  Template  - X: ${xScore3.toFixed(1)}%, =: ${equalsScore3.toFixed(1)}%`);
         
         // Use Approach 3 (Template Matching) as primary - much more accurate!
         const xScore = xScore3;
         const equalsScore = equalsScore3;
         
         // DEBUG: Add detailed analysis for the problematic case
-        if (debugInfo && debugInfo.position === 'V0-1_R5') {
+        if (DEBUG && debugInfo && debugInfo.position === 'V0-1_R5') {
             console.log(`\n🔍 DEBUGGING ${debugInfo.position} (expected X, detected =):`);
             console.log(`    Image size: ${region.bitmap.width}x${region.bitmap.height}`);
             
@@ -184,7 +186,7 @@ async function detectSymbolInRegion(region: typeof Jimp.prototype, debugInfo?: {
         const minConfidence = 30.0;   // Minimum percentage for detection
         const minMargin = 10.0;        // Minimum percentage difference for clear decision
         const scoreDifference = Math.abs(xScore - equalsScore);
-        console.log(`    Winner: ${xScore > equalsScore ? 'X' : '='}, Diff: ${scoreDifference.toFixed(1)}%`)
+        if (DEBUG) console.log(`    Winner: ${xScore > equalsScore ? 'X' : '='}, Diff: ${scoreDifference.toFixed(1)}%`)
         
         let detectedSymbol: string | null = null;
         
@@ -206,7 +208,7 @@ async function detectSymbolInRegion(region: typeof Jimp.prototype, debugInfo?: {
         }
         // If scores are too close, don't make a decision (return null)
         
-        console.log(`    Adaptive margin: ${adaptiveMargin}, Decision: ${detectedSymbol || 'none'}`)
+        if (DEBUG) console.log(`    Adaptive margin: ${adaptiveMargin}, Decision: ${detectedSymbol || 'none'}`)
 
         return detectedSymbol;
     } catch (error) {
@@ -865,8 +867,8 @@ function detectXLinesApproach2WithDebug(region: typeof Jimp.prototype): number {
     const width = region.bitmap.width;
     const height = region.bitmap.height;
     
-    console.log(`    🔍 X Detection Debug:`);
-    console.log(`       Region: ${width}x${height}`);
+    if (DEBUG) console.log(`    🔍 X Detection Debug:`);
+    if (DEBUG) console.log(`       Region: ${width}x${height}`);
     
     const gray = region.clone().greyscale();
     const threshold = 128;
@@ -916,12 +918,12 @@ function detectXLinesApproach2WithDebug(region: typeof Jimp.prototype): number {
         }
     }
     
-    console.log(`       Dark pixels: ${darkPixels.length}`);
-    console.log(`       Main diagonal: ${mainDiagCount}, Anti diagonal: ${antiDiagCount}`);
-    console.log(`       Horizontal lines outside center: ${horizontalLinesOutsideCenter}`);
+    if (DEBUG) console.log(`       Dark pixels: ${darkPixels.length}`);
+    if (DEBUG) console.log(`       Main diagonal: ${mainDiagCount}, Anti diagonal: ${antiDiagCount}`);
+    if (DEBUG) console.log(`       Horizontal lines outside center: ${horizontalLinesOutsideCenter}`);
     
     if (darkPixels.length < 3) {
-        console.log(`       ❌ Too few dark pixels (${darkPixels.length})`);
+        if (DEBUG) console.log(`       ❌ Too few dark pixels (${darkPixels.length})`);
         return 0;
     }
     
@@ -930,20 +932,20 @@ function detectXLinesApproach2WithDebug(region: typeof Jimp.prototype): number {
     const diagonalEvidence = (mainDiagCount + antiDiagCount) / darkPixels.length;
     const horizontalThreshold = diagonalEvidence > 0.4 ? 20 : 6; // More lenient if strong diagonals
     
-    console.log(`       Diagonal evidence: ${diagonalEvidence.toFixed(3)}, horizontal threshold: ${horizontalThreshold}`);
+    if (DEBUG) console.log(`       Diagonal evidence: ${diagonalEvidence.toFixed(3)}, horizontal threshold: ${horizontalThreshold}`);
     
     if (horizontalLinesOutsideCenter > horizontalThreshold) {
-        console.log(`       ❌ Too many horizontal patterns (${horizontalLinesOutsideCenter} > ${horizontalThreshold})`);
+        if (DEBUG) console.log(`       ❌ Too many horizontal patterns (${horizontalLinesOutsideCenter} > ${horizontalThreshold})`);
         return 0;
     }
     
     const mainDiagRatio = mainDiagCount / darkPixels.length;
     const antiDiagRatio = antiDiagCount / darkPixels.length;
     
-    console.log(`       Main diag ratio: ${mainDiagRatio.toFixed(3)}, Anti diag ratio: ${antiDiagRatio.toFixed(3)}`);
+    if (DEBUG) console.log(`       Main diag ratio: ${mainDiagRatio.toFixed(3)}, Anti diag ratio: ${antiDiagRatio.toFixed(3)}`);
     
     if (mainDiagRatio < 0.06 || antiDiagRatio < 0.06) {
-        console.log(`       ❌ Insufficient diagonal coverage (${mainDiagRatio.toFixed(3)}, ${antiDiagRatio.toFixed(3)})`);
+        if (DEBUG) console.log(`       ❌ Insufficient diagonal coverage (${mainDiagRatio.toFixed(3)}, ${antiDiagRatio.toFixed(3)})`);
         return 0;
     }
     
@@ -961,8 +963,8 @@ function detectXLinesApproach2WithDebug(region: typeof Jimp.prototype): number {
     
     const finalScore = crossingScore + balanceBonus + strongCrossingBonus + substantialDiagonalBonus + horizontalToleranceBonus;
     
-    console.log(`       Crossing: ${crossingScore.toFixed(1)}, Balance: ${balanceBonus}, Strong: ${strongCrossingBonus}, Substantial: ${substantialDiagonalBonus}, Tolerance: ${horizontalToleranceBonus}`);
-    console.log(`       ✅ Final X score: ${finalScore.toFixed(1)}`);
+    if (DEBUG) console.log(`       Crossing: ${crossingScore.toFixed(1)}, Balance: ${balanceBonus}, Strong: ${strongCrossingBonus}, Substantial: ${substantialDiagonalBonus}, Tolerance: ${horizontalToleranceBonus}`);
+    if (DEBUG) console.log(`       ✅ Final X score: ${finalScore.toFixed(1)}`);
     
     return finalScore;
 }
@@ -1186,7 +1188,7 @@ function detectTemplateMatch(region: typeof Jimp.prototype, symbolType: 'X' | '=
     
     // Background validation - skip if not whitish enough
     if (backgroundColor < TEMPLATE_CONFIG.minBackground) {
-        console.log(`    Template ${symbolType}: Background too dark (${backgroundColor}), skipping`);
+        if (DEBUG) console.log(`    Template ${symbolType}: Background too dark (${backgroundColor}), skipping`);
         return 0; // Skip processing for non-white backgrounds
     }
     
@@ -1270,8 +1272,8 @@ function detectEqualsLinesApproach2WithDebug(region: typeof Jimp.prototype): num
     const width = region.bitmap.width;
     const height = region.bitmap.height;
     
-    console.log(`    🔍 = Detection Debug:`);
-    console.log(`       Region: ${width}x${height}`);
+    if (DEBUG) console.log(`    🔍 = Detection Debug:`);
+    if (DEBUG) console.log(`       Region: ${width}x${height}`);
     
     const gray = region.clone().greyscale();
     const threshold = 128;
@@ -1337,20 +1339,20 @@ function detectEqualsLinesApproach2WithDebug(region: typeof Jimp.prototype): num
                     gapTolerance: gapTolerance
                 });
                 
-                console.log(`       Row ${y}: ${totalPixels} pixels, span ${effectiveSpan}, ${lineSegments.length} segments`);
+                if (DEBUG) console.log(`       Row ${y}: ${totalPixels} pixels, span ${effectiveSpan}, ${lineSegments.length} segments`);
             }
         }
     }
     
-    console.log(`       Found ${horizontalLines.length} potential horizontal lines`);
+    if (DEBUG) console.log(`       Found ${horizontalLines.length} potential horizontal lines`);
     
     if (horizontalLines.length < 2) {
-        console.log(`       ❌ Too few horizontal lines (${horizontalLines.length})`);
+        if (DEBUG) console.log(`       ❌ Too few horizontal lines (${horizontalLines.length})`);
         return 0;
     }
     
     if (horizontalLines.length > 4) {
-        console.log(`       ❌ Too many horizontal lines (${horizontalLines.length})`);
+        if (DEBUG) console.log(`       ❌ Too many horizontal lines (${horizontalLines.length})`);
         return 0;
     }
     
@@ -1358,10 +1360,10 @@ function detectEqualsLinesApproach2WithDebug(region: typeof Jimp.prototype): num
     const separation = sortedLines[sortedLines.length - 1].y - sortedLines[0].y;
     const minSeparation = height * 0.15;
     
-    console.log(`       Line separation: ${separation}, minimum required: ${minSeparation.toFixed(1)}`);
+    if (DEBUG) console.log(`       Line separation: ${separation}, minimum required: ${minSeparation.toFixed(1)}`);
     
     if (separation < minSeparation) {
-        console.log(`       ❌ Lines too close together`);
+        if (DEBUG) console.log(`       ❌ Lines too close together`);
         return 0;
     }
     
@@ -1372,7 +1374,7 @@ function detectEqualsLinesApproach2WithDebug(region: typeof Jimp.prototype): num
         const gapToleranceScore = line.gapTolerance * 15;
         const lineScore = pixelScore + spanScore + gapToleranceScore;
         totalLineStrength += lineScore;
-        console.log(`       Line at y=${line.y}: score ${lineScore.toFixed(1)} (pixels=${pixelScore/3}, span=${line.effectiveSpan})`);
+        if (DEBUG) console.log(`       Line at y=${line.y}: score ${lineScore.toFixed(1)} (pixels=${pixelScore/3}, span=${line.effectiveSpan})`);
     }
     
     let separateLineBonus = 0;
@@ -1391,8 +1393,8 @@ function detectEqualsLinesApproach2WithDebug(region: typeof Jimp.prototype): num
     
     const finalScore = totalLineStrength + separateLineBonus + strongHorizontalBonus;
     
-    console.log(`       Line strength: ${totalLineStrength.toFixed(1)}, Separation bonus: ${separateLineBonus}, Strong bonus: ${strongHorizontalBonus}`);
-    console.log(`       ✅ Final = score: ${finalScore.toFixed(1)}`);
+    if (DEBUG) console.log(`       Line strength: ${totalLineStrength.toFixed(1)}, Separation bonus: ${separateLineBonus}, Strong bonus: ${strongHorizontalBonus}`);
+    if (DEBUG) console.log(`       ✅ Final = score: ${finalScore.toFixed(1)}`);
     
     return finalScore;
 } 

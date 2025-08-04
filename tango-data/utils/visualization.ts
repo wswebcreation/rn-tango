@@ -180,7 +180,7 @@ export async function drawDetectedSymbolsOnAreasImage(
         
         // Save the image with detected symbols
         await baseImage.write(outputImagePath as `${string}.${string}`);
-        console.log(`🧡 Added orange borders for ${detectedAreas.length} detected symbols: ${outputImagePath}`);
+        if (DEBUG) console.log(`🧡 Added orange borders for ${detectedAreas.length} detected symbols: ${outputImagePath}`);
         
     } catch (error) {
         console.error('Error drawing detected symbols on areas image:', error);
