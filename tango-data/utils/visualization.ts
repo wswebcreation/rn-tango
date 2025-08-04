@@ -89,7 +89,9 @@ export async function drawGridLinesAndSave(
 export async function drawDetectedSymbolsOnAreasImage(
     detectedAreas: { x: number, y: number, w: number, h: number, symbol: string, position?: string }[],
     puzzleNumber: number,
-    constraintsImagesFolder: string
+    constraintsImagesFolder: string,
+    horizontalGrid?: any,
+    verticalGrid?: any
 ): Promise<void> {
     // Load the base constraints image (the greyscale constraints image)
     const constraintsImagePath = `${constraintsImagesFolder}/tango-${puzzleNumber.toString().padStart(3, '0')}.png`;
@@ -169,6 +171,11 @@ export async function drawDetectedSymbolsOnAreasImage(
                 const textCenterX = area.x + Math.floor(area.w / 2); // Center horizontally
                 drawPositionTextWithBackground(baseImage, combinedText, textCenterX, textStartY, orange, true); // true for center alignment
             }
+        }
+        
+        // Draw 6x6 debug grid with row/column numbering if grid data is available
+        if (horizontalGrid && verticalGrid) {
+            drawDebugGrid(baseImage, horizontalGrid, verticalGrid);
         }
         
         // Save the image with detected symbols
@@ -451,4 +458,59 @@ function drawPositionTextWithBackground(image: any, text: string, startX: number
     
     // Draw the text on top of the background
     drawPositionText(image, text, textStartX, startY, textColor, false); // false since we already calculated position
+}
+
+/**
+ * Draws a 6x6 debug grid with thin dotted orange lines and row/column numbering (0-5)
+ */
+function drawDebugGrid(image: any, horizontalGrid: any, verticalGrid: any): void {
+    const gridWidth = verticalGrid.gridWidth;
+    const gridHeight = horizontalGrid.gridHeight;
+    const cellWidth = gridWidth / 6; // 6x6 grid
+    const cellHeight = gridHeight / 6;
+    
+    // Semi-transparent orange for grid lines
+    const gridOrange = 0xFFA50060; // 37% transparent orange
+    
+    // Draw horizontal grid lines (dotted)
+    for (let row = 0; row <= 6; row++) {
+        const y = Math.round(row * cellHeight);
+        if (y >= 0 && y < image.bitmap.height) {
+            for (let x = 0; x < gridWidth; x += 3) { // Dotted pattern every 3 pixels
+                if (x < image.bitmap.width) {
+                    image.setPixelColor(gridOrange, x, y);
+                }
+            }
+        }
+    }
+    
+    // Draw vertical grid lines (dotted)
+    for (let col = 0; col <= 6; col++) {
+        const x = Math.round(col * cellWidth);
+        if (x >= 0 && x < image.bitmap.width) {
+            for (let y = 0; y < gridHeight; y += 3) { // Dotted pattern every 3 pixels
+                if (y < image.bitmap.height) {
+                    image.setPixelColor(gridOrange, x, y);
+                }
+            }
+        }
+    }
+    
+    // Draw row numbers (0-5) on the left side
+    for (let row = 0; row < 6; row++) {
+        const y = Math.round(row * cellHeight + cellHeight / 2 - 3); // Center vertically in cell, adjust for font height
+        const x = 5; // 5 pixels from left edge
+        if (x < image.bitmap.width && y >= 0 && y < image.bitmap.height - 7) {
+            drawPositionText(image, row.toString(), x, y, gridOrange, false);
+        }
+    }
+    
+    // Draw column numbers (0-5) on the top
+    for (let col = 0; col < 6; col++) {
+        const x = Math.round(col * cellWidth + cellWidth / 2 - 2); // Center horizontally in cell, adjust for font width
+        const y = 5; // 5 pixels from top edge
+        if (x >= 0 && x < image.bitmap.width - 5 && y < image.bitmap.height) {
+            drawPositionText(image, col.toString(), x, y, gridOrange, false);
+        }
+    }
 } 

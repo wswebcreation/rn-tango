@@ -143,7 +143,7 @@ export async function detectGridConstraints(
     
     // Draw orange borders on detected areas and save the updated constraint areas image
     if (detectedAreas.length > 0) {
-        await drawDetectedSymbolsOnAreasImage(detectedAreas, puzzleNumber, constraintsImagesFolder);
+        await drawDetectedSymbolsOnAreasImage(detectedAreas, puzzleNumber, constraintsImagesFolder, horizontalGrid, verticalGrid);
     }
     
     return constraints;
