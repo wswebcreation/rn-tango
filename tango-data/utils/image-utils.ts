@@ -1,5 +1,5 @@
 import { Jimp } from "jimp";
-import { DEBUG, GRID_SIZE, ICON_REMOVAL_PERCENTAGE } from "./constants";
+import { DEBUG, GRID_SIZE, ICON_REMOVAL_COLOR, ICON_REMOVAL_PERCENTAGE } from "./constants";
 
 /**
  * Gets greyscale value from a pixel (using green channel)
@@ -34,12 +34,9 @@ export function removeCellIcons(image: typeof Jimp.prototype): typeof Jimp.proto
     const centerAreaWidth = Math.floor(cellWidth * ICON_REMOVAL_PERCENTAGE);
     if(DEBUG) console.log(`Center area to clear: ${centerAreaWidth}x${centerAreaWidth} pixels`);
     
-    // Calculate margins (border areas to preserve)
     const marginX = Math.floor((cellWidth - centerAreaWidth) / 2);
     const marginY = Math.floor((cellWidth - centerAreaWidth) / 2);
-    
-    // Background color (white for clean removal)
-    const blockOutColor = 0x00000000;
+    const blockOutColor = ICON_REMOVAL_COLOR;
     
     // Process each cell in the 6x6 grid
     for (let row = 0; row < GRID_SIZE; row++) {

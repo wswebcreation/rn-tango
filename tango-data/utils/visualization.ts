@@ -458,8 +458,8 @@ function drawPositionTextWithBackground(image: any, text: string, startX: number
  * Draws a 6x6 debug grid with thin dotted orange lines and row/column numbering (0-5)
  */
 function drawDebugGrid(image: any, horizontalGrid: any, verticalGrid: any): void {
-    const gridWidth = verticalGrid.gridWidth;
-    const gridHeight = horizontalGrid.gridHeight;
+    const gridWidth = image.bitmap.width;
+    const gridHeight = image.bitmap.height;
     const cellWidth = gridWidth / 6; // 6x6 grid
     const cellHeight = gridHeight / 6;
     

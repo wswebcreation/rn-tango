@@ -31,15 +31,12 @@ export async function detectGridConstraints(
     const detectedAreas: { x: number, y: number, w: number, h: number, symbol: string, position?: string }[] = [];
     if (DEBUG) console.log(`🔍 Starting constraint detection on ${imageWithDetectedSymbols.bitmap.width}x${imageWithDetectedSymbols.bitmap.height} image`);
     
-    // Calculate grid cell dimensions
-    const gridWidth = verticalGrid.gridWidth;
-    const gridHeight = horizontalGrid.gridHeight;
-    const cellWidth = gridWidth / GRID_SIZE;
-    const cellHeight = gridHeight / GRID_SIZE;
-    
-    // Get image dimensions for boundary checking
     const imageWidth = imageWithDetectedSymbols.bitmap.width;
     const imageHeight = imageWithDetectedSymbols.bitmap.height;
+    const gridWidth = imageWidth; 
+    const gridHeight = imageHeight;
+    const cellWidth = gridWidth / GRID_SIZE;
+    const cellHeight = gridHeight / GRID_SIZE;
     
     // Check vertical grid lines (between adjacent columns)
     for (let col = 0; col < GRID_LINES_COUNT; col++) { // Vertical lines between columns

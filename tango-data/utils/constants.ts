@@ -18,6 +18,9 @@ export const DEBUG_SAVE_IMAGES = true;
 // OCR flags
 export const OCR = false;
 
+// Icon removal configuration
+// export const ICON_REMOVAL_COLOR = 0x00000000; // Black color to block out the center area
+export const ICON_REMOVAL_COLOR = 0xFFFFFFFF; // White color to block out the center area
 export const ICON_REMOVAL_PERCENTAGE = 0.6;
 
 // Grid cropping configuration
