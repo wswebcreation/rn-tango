@@ -3,6 +3,7 @@ import { Jimp } from 'jimp';
 import { remote } from 'webdriverio';
 import { detectGrid, type GridDetectionResult } from './grid-detection/index';
 import { Puzzle } from './types/shared-types';
+import { buildAndValidateTangoPuzzle, ValidationResult } from './utils/build-puzzle';
 import { DEBUG, DEBUG_SAVE_IMAGES, OCR } from './utils/constants';
 import { detectGridConstraints } from './utils/constraint-detection';
 import { ensureDirectoryExists } from './utils/file-utils';
@@ -10,7 +11,6 @@ import { calculateCropBoundaries, processAndSaveGridImages, type CropBoundaries,
 import { getPrefilledData } from './utils/prefill-detection';
 import { drawCropBoundariesAndSave, drawDetectedSymbolsOnAreasImage } from './utils/visualization';
 import getData from '/Users/wimselles/Git/games/tango/node_modules/@wdio/ocr-service/dist/utils/getData.js';
-import { buildAndValidateTangoPuzzle, ValidationResult } from './utils/build-puzzle';
 
 // Configuration
 const processedImagesFolder = './tango-data/processed-images';
