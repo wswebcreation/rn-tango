@@ -1,19 +1,12 @@
 import { readFileSync, writeFileSync } from 'fs';
 import { Jimp } from 'jimp';
 import { remote } from 'webdriverio';
-import {
-    createSquareGridFromLeftLine,
-    createSquareGridFromTopLine,
-    deriveHorizontalFromVertical,
-    deriveVerticalFromHorizontal,
-    detectLeftVerticalLine,
-    detectTopHorizontalLine
-} from './grid-detection/index';
+import { detectGrid, type GridDetectionResult } from './grid-detection/index';
 import { Puzzle } from './types/shared-types';
-import { DEBUG, DEBUG_SAVE_IMAGES, GRID_CORNER_PADDING, OCR } from './utils/constants';
+import { DEBUG, DEBUG_SAVE_IMAGES, OCR } from './utils/constants';
 import { detectGridConstraints } from './utils/constraint-detection';
 import { ensureDirectoryExists } from './utils/file-utils';
-import { removeCellIcons } from './utils/image-utils';
+import { calculateCropBoundaries, processAndSaveGridImages, type CropBoundaries, type GridProcessingFolders } from './utils/image-utils';
 import { drawCropBoundariesAndSave, drawDetectedSymbolsOnAreasImage } from './utils/visualization';
 import getData from '/Users/wimselles/Git/games/tango/node_modules/@wdio/ocr-service/dist/utils/getData.js';
 
@@ -61,7 +54,8 @@ async function processImages(): Promise<void> {
     
     for (const file of files) {
         const fileName = file.split('/').pop();
-        const puzzleNumber = parseInt(fileName!.split('-')[1].split('.')[0]);
+        if (!fileName) continue; // Skip if filename is undefined
+        const puzzleNumber = parseInt(fileName.split('-')[1].split('.')[0]);
         const parsedPuzzle: Puzzle = {
             id: puzzleNumber,
             size: 6,
@@ -140,82 +134,39 @@ async function processImages(): Promise<void> {
             
                 if (DEBUG_SAVE_IMAGES) await greyImage.write(`${greyImagesFolder}/${fileName}`);
             
-                // Simple approach: detect ONE reference line, calculate everything else geometrically
-                let horizontalGrid = null;
-                let verticalGrid = null;
+                // Detect grid using main detection function
+                const gridDetection: GridDetectionResult = detectGrid(greyImage);
+                const { horizontalGrid, verticalGrid, success } = gridDetection;
             
-                // 1. Try to detect top horizontal line (primary approach)
-                const topLine = detectTopHorizontalLine(greyImage);
-                if (topLine) {
-                    if (DEBUG) console.log(`✅ Found top line, calculating square grid geometrically`);
-                    horizontalGrid = createSquareGridFromTopLine(topLine);
-                    verticalGrid = deriveVerticalFromHorizontal(horizontalGrid);
-                } else {
-                    // 2. Fallback: try to detect left vertical line
-                    if (DEBUG) console.log(`🔄 Top line failed, trying left vertical line fallback`);
-                    const leftLine = detectLeftVerticalLine(greyImage);
-                    if (leftLine) {
-                        if (DEBUG) console.log(`✅ Found left line, calculating square grid geometrically`);
-                        verticalGrid = createSquareGridFromLeftLine(leftLine);
-                        horizontalGrid = deriveHorizontalFromVertical(verticalGrid);
-                    }
-                }
-            
-                if (horizontalGrid || verticalGrid) {
+                if (success) {
                     if (DEBUG) console.log(`✅ Grid detected for: ${fileName}.\n`);
-                    if (horizontalGrid) {
-                        if (DEBUG) console.log(`  Horizontal:`, horizontalGrid);
-                    }
-                    if (verticalGrid) {
-                        if (DEBUG) console.log(`  Vertical:`, verticalGrid);
-                    }
                     
-                    // 5. Calculate crop boundaries (with rounded corner padding)
-                    const topLine = horizontalGrid?.topLine;
-                    const bottomLine = horizontalGrid?.bottomLine;
-                    const leftLine = verticalGrid?.leftLine;
-                    const rightLine = verticalGrid?.rightLine;
-                    
-                    // Account for rounded corners: add padding on each side
-                    const CORNER_PADDING = GRID_CORNER_PADDING;
-                    const rawGridX = leftLine?.x || 0;
-                    const rawGridY = topLine?.y || 0;
-                    const rawGridWidth = (rightLine?.x || 0) - rawGridX;
-                    const rawGridHeight = (bottomLine?.y || 0) - rawGridY;
-                    
-                    // Expand grid boundaries with padding, but stay within image bounds
+                    // Calculate crop boundaries with padding
                     const { width: imageWidth, height: imageHeight } = croppedImage.bitmap;
-                    const gridX = Math.max(0, rawGridX - CORNER_PADDING); // Extend left to capture left rounded corner
-                    const gridY = rawGridY; // Keep detected top line position (already accurate)
-                    const gridWidth = Math.min(imageWidth - gridX, rawGridWidth + (CORNER_PADDING * 2)); // Extend left + right
-                    const gridHeight = Math.min(imageHeight - gridY, rawGridHeight + CORNER_PADDING); // Extend down only
+                    const cropBoundaries: CropBoundaries = calculateCropBoundaries(
+                        horizontalGrid, 
+                        verticalGrid, 
+                        imageWidth, 
+                        imageHeight
+                    );
                     
-                    // Pass crop boundaries to visualization
-                    const cropBoundaries = {
-                        x: gridX,
-                        y: gridY, 
-                        width: gridWidth,
-                        height: gridHeight
+                    // Draw visualization with crop boundaries
+                    const visualCropBoundaries = {
+                        x: cropBoundaries.x,
+                        y: cropBoundaries.y,
+                        width: cropBoundaries.width,
+                        height: cropBoundaries.height
                     };
-                    await drawCropBoundariesAndSave(greyImage, horizontalGrid, verticalGrid, puzzleNumber, gridDetectedImagesFolder, cropBoundaries);
+                    await drawCropBoundariesAndSave(greyImage, horizontalGrid, verticalGrid, puzzleNumber, gridDetectedImagesFolder, visualCropBoundaries);
                     
-                    // Apply the crop
-                    ensureDirectoryExists(gridCroppedImagesFolder);
-                    
-                    if (DEBUG) console.log(`📐 Grid crop: ${rawGridX},${rawGridY} ${rawGridWidth}×${rawGridHeight} → ${gridX},${gridY} ${gridWidth}×${gridHeight} (+${CORNER_PADDING}px padding)`);
-                    
-                    gridCroppedImage = await croppedImage
-                        .clone()
-                        .crop({ x: gridX, y: gridY, w: gridWidth, h: gridHeight })
-                    if (DEBUG_SAVE_IMAGES) await gridCroppedImage.write(`${gridCroppedImagesFolder}/${fileName}`);
-                    const blockOutImage = removeCellIcons(gridCroppedImage);
-                    if (DEBUG_SAVE_IMAGES) await blockOutImage.write(`${gridCroppedImagesFolder}/blockOut-${fileName}`);
+                    // Process and save grid images
+                    const folders: GridProcessingFolders = { gridCroppedImagesFolder };
+                    gridCroppedImage = await processAndSaveGridImages(croppedImage, cropBoundaries, fileName, folders);
                 } else {
                     // Save failed detection to grid-failed folder
-                    const failedFolder = gridFailedImagesFolder;
-                    ensureDirectoryExists(failedFolder);
-                    if (DEBUG_SAVE_IMAGES) await greyImage.write(`${failedFolder}/${fileName}`);
-                    console.log(`❌ Saved failed detection: ${failedFolder}/${fileName}`);
+                    ensureDirectoryExists(gridFailedImagesFolder);
+                    if (DEBUG_SAVE_IMAGES) await greyImage.write(`${gridFailedImagesFolder}/${fileName}`);
+                    console.log(`❌ Saved failed detection: ${gridFailedImagesFolder}/${fileName}`);
                 }
 
                 // 6. Determine the x and = symbols on the grid cropped image for determining the constraints
