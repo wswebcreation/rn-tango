@@ -81,6 +81,90 @@ export async function drawCropBoundariesAndSave(
 
 
 /**
+ * Draws orange borders and coordinate labels with moon emoji on detected prefilled cells
+ * Returns the image with visualizations drawn
+ */
+export async function drawPrefilledCellsVisualization(
+    prefilledData: Record<string, string>,
+    baseImage: typeof Jimp.prototype,
+    cellWidth: number,
+    cellHeight: number
+): Promise<typeof Jimp.prototype | null> {
+    try {
+        // Clone the base image to avoid modifying the original
+        const workingImage = baseImage.clone();
+        const orange = 0xFF8C00FF; // Orange color
+        
+        // Draw orange borders and icons for each prefilled cell
+        for (const [cellCoord, iconType] of Object.entries(prefilledData)) {
+            const [row, col] = cellCoord.split(',').map(Number);
+            
+            // Calculate cell boundaries
+            const cellX = col * cellWidth;
+            const cellY = row * cellHeight;
+            
+            // Draw thick orange border (3 pixels wide) around the cell
+            for (let thickness = 0; thickness < 3; thickness++) {
+                // Top and bottom borders
+                for (let x = cellX; x < cellX + cellWidth; x++) {
+                    if (x >= 0 && x < workingImage.bitmap.width) {
+                        // Top border
+                        const topY = cellY + thickness;
+                        if (topY >= 0 && topY < workingImage.bitmap.height) {
+                            workingImage.setPixelColor(orange, x, topY);
+                        }
+                        // Bottom border
+                        const bottomY = cellY + cellHeight - 1 - thickness;
+                        if (bottomY >= 0 && bottomY < workingImage.bitmap.height) {
+                            workingImage.setPixelColor(orange, x, bottomY);
+                        }
+                    }
+                }
+
+                // Left and right borders
+                for (let y = cellY; y < cellY + cellHeight; y++) {
+                    if (y >= 0 && y < workingImage.bitmap.height) {
+                        // Left border
+                        const leftX = cellX + thickness;
+                        if (leftX >= 0 && leftX < workingImage.bitmap.width) {
+                            workingImage.setPixelColor(orange, leftX, y);
+                        }
+                        // Right border
+                        const rightX = cellX + cellWidth - 1 - thickness;
+                        if (rightX >= 0 && rightX < workingImage.bitmap.width) {
+                            workingImage.setPixelColor(orange, rightX, y);
+                        }
+                    }
+                }
+            }
+            
+            // Draw combined coordinate and icon text inside the cell at the bottom
+            const textStartY = cellY + cellHeight - 16; // 16 pixels from bottom of cell (inside the cell)
+            const centerX = cellX + Math.floor(cellWidth / 2);
+            
+            // Determine icon symbol based on detected type
+            const iconSymbol = iconType === "☀️" ? "S" : "C"; // S for sun, C for moon
+            
+            // Create combined text in format "1,1 S" or "1,1 C" (coordinates + icon symbol)
+            const combinedText = `${row},${col} ${iconSymbol}`;
+            
+            // Draw combined text centered inside cell at bottom with orange background and white text
+            const whiteColor = 0xFFFFFFFF; // White text color for visibility on orange background
+            drawPositionTextWithBackground(workingImage, combinedText, centerX, textStartY, whiteColor, true);
+        }
+        
+        if (DEBUG) console.log(`🌙 Added orange borders and icons for ${Object.keys(prefilledData).length} prefilled cells`);
+        return workingImage;
+        
+    } catch (error) {
+        console.error('Error drawing prefilled cells visualization:', error);
+        return null;
+    }
+}
+
+
+
+/**
  * Draws orange borders on detected symbols on the constraints image
  * Returns the image with visualizations drawn
  */
@@ -181,61 +265,6 @@ export async function drawDetectedSymbolsOnAreasImage(
     }
 }
 
-/**
- * Draws simple text on an image using pixel art style
- */
-function drawSimpleText(image: any, text: string, centerX: number, startY: number, color: number): void {
-    const char = text.charAt(0); // We only need to draw single character ('X' or '=')
-    
-    // 9x11 pixel font patterns with thinner 1-2 pixel lines
-    const fontPatterns: { [key: string]: string[] } = {
-        'X': [
-            '■       ■',
-            ' ■     ■ ',
-            '  ■   ■  ',
-            '   ■ ■   ',
-            '    ■    ',
-            '   ■ ■   ',
-            '  ■   ■  ',
-            ' ■     ■ ',
-            '■       ■'
-        ],
-        '=': [
-            '         ',
-            '■■■■■■■■■',
-            '         ',
-            '         ',
-            '         ',
-            '         ',
-            '■■■■■■■■■',
-            '         ',
-            '         '
-        ]
-    };
-    
-    const pattern = fontPatterns[char];
-    if (!pattern) return;
-    
-    const charWidth = 9;  // Updated to match the new font width
-    const charHeight = pattern.length;
-    const startX = centerX - Math.floor(charWidth / 2); // Center the character
-    
-    for (let row = 0; row < charHeight; row++) {
-        const line = pattern[row];
-        for (let col = 0; col < line.length; col++) {
-            if (line[col] === '■') {
-                const pixelX = startX + col;
-                const pixelY = startY + row;
-                
-                // Check bounds and draw pixel
-                if (pixelX >= 0 && pixelX < image.bitmap.width && 
-                    pixelY >= 0 && pixelY < image.bitmap.height) {
-                    image.setPixelColor(color, pixelX, pixelY);
-                }
-            }
-        }
-    }
-}
 
 /**
  * Draws position text using small pixel font (e.g., "5,0-5,1 =")
@@ -377,6 +406,24 @@ function drawPositionText(image: any, text: string, startX: number, startY: numb
             '■   ■',
             '     ',
             '     '
+        ],
+        'C': [
+            '■■   ',
+            '  ■  ',
+            '   ■ ',
+            '    ■',
+            '   ■ ',
+            '  ■  ',
+            '■■   '
+        ],
+        'S': [
+            ' ■■■ ',
+            '■■■■■',
+            '■■■■■',
+            '■■■■■',
+            '■■■■■',
+            '■■■■■',
+            ' ■■■ '
         ]
     };
     

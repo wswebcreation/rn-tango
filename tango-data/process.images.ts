@@ -7,6 +7,7 @@ import { DEBUG, DEBUG_SAVE_IMAGES, OCR } from './utils/constants';
 import { detectGridConstraints } from './utils/constraint-detection';
 import { ensureDirectoryExists } from './utils/file-utils';
 import { calculateCropBoundaries, processAndSaveGridImages, type CropBoundaries, type GridProcessingFolders } from './utils/image-utils';
+import { getPrefilledData } from './utils/prefill-detection';
 import { drawCropBoundariesAndSave, drawDetectedSymbolsOnAreasImage } from './utils/visualization';
 import getData from '/Users/wimselles/Git/games/tango/node_modules/@wdio/ocr-service/dist/utils/getData.js';
 
@@ -33,14 +34,13 @@ const prefilledImagesFolder = `${processedImagesFolder}/7. prefilled`;
 const files = [
     './tango-data/thumbnails/tango-001.png',
     './tango-data/thumbnails/tango-002.png',
-    './tango-data/thumbnails/tango-003.png', //  wrong on 4,2-5,2, is showed a =, should be nothing
-    './tango-data/thumbnails/tango-004.png', // 6 false positives, due to seeing the bottom of the sun/moon as an  =
-    './tango-data/thumbnails/tango-005.png', // only 2?
+    './tango-data/thumbnails/tango-003.png',
+    './tango-data/thumbnails/tango-004.png',
+    './tango-data/thumbnails/tango-005.png',
     './tango-data/thumbnails/tango-006.png',
-    './tango-data/thumbnails/tango-007.png', // 7 false positives, due to seeing the bottom of the sun/moon as an  =, but also because the grid is not 100 centered
-    './tango-data/thumbnails/tango-008.png', // 6 false positives, due to seeing the bottom of the sun/moon as an  =, also missed a x
-    './tango-data/thumbnails/tango-009.png', // 1 wrong one due to the mouse that is in the image
-    './tango-data/thumbnails/tango-010.png', // 3 false positives, due to seeing the bottom of the sun/moon as an
+    './tango-data/thumbnails/tango-007.png',
+    './tango-data/thumbnails/tango-008.png',
+    './tango-data/thumbnails/tango-010.png',
     // The bad images where undo can't be found
     // Not 100% correct: 27, 196, 
 ];
@@ -208,7 +208,15 @@ async function processImages(): Promise<void> {
                     }
                 
                     parsedPuzzle.constraints = constraints;
+
+                    // 7. Prefill the puzzle
+                    ensureDirectoryExists(prefilledImagesFolder);
+                    const {prefilledData, prefilledImage} = await getPrefilledData(gridCroppedImage, prefilledImagesFolder, fileName);
+                    if (DEBUG_SAVE_IMAGES) await prefilledImage.write(`${prefilledImagesFolder}/${fileName}`);
                     
+                    parsedPuzzle.prefilled = prefilledData;
+
+                
                     processedImages++;
                     
                 } else {
