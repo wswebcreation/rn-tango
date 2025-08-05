@@ -10,6 +10,7 @@ import { calculateCropBoundaries, processAndSaveGridImages, type CropBoundaries,
 import { getPrefilledData } from './utils/prefill-detection';
 import { drawCropBoundariesAndSave, drawDetectedSymbolsOnAreasImage } from './utils/visualization';
 import getData from '/Users/wimselles/Git/games/tango/node_modules/@wdio/ocr-service/dist/utils/getData.js';
+import { buildAndValidateTangoPuzzle } from './utils/build-puzzle';
 
 // Configuration
 const processedImagesFolder = './tango-data/processed-images';
@@ -208,8 +209,13 @@ async function processImages(): Promise<void> {
                     }
                 
                     parsedPuzzle.constraints = constraints;
+                    
+                } else {
+                    if (DEBUG) console.log(`❌ No grid cropped image or grid data found for: ${fileName}`);
+                }
 
-                    // 7. Prefill the puzzle
+                // 7. Prefill the puzzle
+                if(parsedPuzzle.constraints.length > 0) {
                     ensureDirectoryExists(prefilledImagesFolder);
                     const {prefilledData, prefilledImage} = await getPrefilledData(gridCroppedImage, prefilledImagesFolder, fileName);
                     if (DEBUG_SAVE_IMAGES) await prefilledImage.write(`${prefilledImagesFolder}/${fileName}`);
@@ -218,17 +224,23 @@ async function processImages(): Promise<void> {
 
                 
                     processedImages++;
-                    
                 } else {
-                    if (DEBUG) console.log(`❌ No grid cropped image or grid data found for: ${fileName}`);
+                    if (DEBUG) console.log(`❌ No grid cropped image and constraints found for: ${fileName}`);
+                }
+
+                // 8. We now need to check if we can build the Tango puzzle based on the constraints and prefilled data
+                // If we can, we can save the puzzle to the parsed-images.json file
+                if(Object.keys(parsedPuzzle.prefilled).length > 0) {
+                    const tangoPuzzle = buildAndValidateTangoPuzzle(parsedPuzzle);
+                    parsedPuzzles.push(tangoPuzzle);
+                } else {
+                    if (DEBUG) console.log(`❌ No prefilled data found for: ${fileName}`);
                 }
             
             } catch (error) {
                 console.error(`Failed to process ${file}:`, error);
                 console.log(`Continuing with next image...`);
             }
-
-            parsedPuzzles.push(parsedPuzzle);
         }
     }
 
