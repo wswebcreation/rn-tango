@@ -1,4 +1,5 @@
 import { Jimp } from 'jimp';
+import { CellCoordinate, Constraint, ConstraintType } from '../types/shared-types';
 import {
     CONSTRAINT_DETECTION_HALF_SIZE,
     CONSTRAINT_DETECTION_SIZE,
@@ -6,13 +7,12 @@ import {
     GRID_SIZE,
     MIN_DETECTION_AREA_SIZE
 } from './constraint-config';
-import { drawDetectedSymbolsOnAreasImage } from './visualization';
 
 const DEBUG = false;
 
 /**
  * Detects x and = symbols on grid borders
- * Returns array of constraints in format: [["0,0", "0,1", "="], ["0,0", "1,0", "x"]]
+ * Returns both constraints array and detected areas for visualization
  */
 export async function detectGridConstraints(
     image: typeof Jimp.prototype, 
@@ -20,8 +20,8 @@ export async function detectGridConstraints(
     verticalGrid: any,
     puzzleNumber: number,
     constraintsImagesFolder: string
-): Promise<string[][]> {
-    const constraints: string[][] = [];
+): Promise<{ constraints: Constraint[], detectedAreas: { x: number, y: number, w: number, h: number, symbol: string, position?: string }[] }> {
+    const constraints: Constraint[] = [];
     const detectedAreas: { x: number, y: number, w: number, h: number, symbol: string, position?: string }[] = [];
     if (DEBUG) console.log(`🔍 Starting constraint detection on ${image.bitmap.width}x${image.bitmap.height} image`);
     
@@ -71,9 +71,9 @@ export async function detectGridConstraints(
                 
                 if (verticalSymbol) {
                     constraints.push([
-                        `${row},${col}`, 
-                        `${row},${col + 1}`, 
-                        verticalSymbol
+                        `${row},${col}` as CellCoordinate, 
+                        `${row},${col + 1}` as CellCoordinate, 
+                        verticalSymbol as ConstraintType
                     ]);
                     // Store area for orange border drawing
                     detectedAreas.push({
@@ -125,9 +125,9 @@ export async function detectGridConstraints(
                 
                 if (horizontalSymbol) {
                     constraints.push([
-                        `${row},${col}`, 
-                        `${row + 1},${col}`, 
-                        horizontalSymbol
+                        `${row},${col}` as CellCoordinate, 
+                        `${row + 1},${col}` as CellCoordinate, 
+                        horizontalSymbol as ConstraintType
                     ]);
                     // Store area for orange border drawing
                     detectedAreas.push({
@@ -143,12 +143,7 @@ export async function detectGridConstraints(
         }
     }
     
-    // Draw orange borders on detected areas and save the updated constraint areas image
-    if (detectedAreas.length > 0) {
-        await drawDetectedSymbolsOnAreasImage(detectedAreas, puzzleNumber, constraintsImagesFolder, horizontalGrid, verticalGrid);
-    }
-    
-    return constraints;
+    return { constraints, detectedAreas };
 }
 
 /**

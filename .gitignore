@@ -43,3 +43,5 @@ tango-data/grey/
 tango-data/detected/
 tango-data/cropped/
 tango-data/processed-images/
+
+tango-data/types/shared-types.ts

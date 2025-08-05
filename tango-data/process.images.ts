@@ -9,9 +9,10 @@ import {
     detectLeftVerticalLine,
     detectTopHorizontalLine
 } from './grid-detection/index';
+import { Puzzle } from './types/shared-types';
 import { detectGridConstraints } from './utils/constraint-detection';
 import { ensureDirectoryExists } from './utils/file-utils';
-import { drawGridLinesAndSave } from './utils/visualization';
+import { drawDetectedSymbolsOnAreasImage, drawGridLinesAndSave } from './utils/visualization';
 import getData from '/Users/wimselles/Git/games/tango/node_modules/@wdio/ocr-service/dist/utils/getData.js';
 
 // Debug flag - set to true to enable detailed logging
@@ -59,11 +60,17 @@ async function processImages(): Promise<void> {
     const startTime = Date.now();
     const puzzleNumbersToSkip = [27, 196];
     let processedImages = 0;
-    const parsedPuzzles: any[] = []; // Collect parsed puzzle data
+    const parsedPuzzles: Puzzle[] = [];
     
     for (const file of files) {
         const fileName = file.split('/').pop();
         const puzzleNumber = parseInt(fileName!.split('-')[1].split('.')[0]);
+        const parsedPuzzle: Puzzle = {
+            id: puzzleNumber,
+            size: 6,
+            prefilled: {},
+            constraints: []
+        };
         let croppedImage = null;
         let greyImage = null;
         let gridCroppedImage = null;
@@ -189,27 +196,17 @@ async function processImages(): Promise<void> {
                     console.log(`❌ Saved failed detection: ${failedFolder}/${fileName}`);
                 }
 
-                // 6. The Goal of the following step is that we can determine the x and = symbols
-                // the symbols are on the borders of the grid cropped image in a structure like this:
-                // ["0,0", "0,1","="] => the = is between 0,0 and 0,1
-                // ["0,0","1,0","x"], => the x is between 0,0 and 1,0
-                // We now need to determine the x and = symbols in the grid cropped image and output them to the console per image as a constraints array
-                // The constraints array is an array of arrays, each containing 3 elements: the x and = symbols
-                // The x and = symbols are represented as strings in the format "x,y"
-                // We should determine where there borders are and check per cell if they are x or =, if nothing  then we should proceed to the next
+                // 6. Determine the x and = symbols on the grid cropped image for determining the constraints
                 if (gridCroppedImage && horizontalGrid && verticalGrid) {
                     ensureDirectoryExists(constraintsImagesFolder);
                     constraintsImage = gridCroppedImage
                         .clone()
                         .greyscale()
                         .contrast(1);
-        
-                    if (DEBUG_SAVE_IMAGES) await constraintsImage.write(`${constraintsImagesFolder}/${fileName}`);
-
-                    
 
                     // Detect constraints on grid borders
-                    const constraints = await detectGridConstraints(constraintsImage, horizontalGrid, verticalGrid, puzzleNumber, constraintsImagesFolder);
+                    const result = await detectGridConstraints(constraintsImage, horizontalGrid, verticalGrid, puzzleNumber, constraintsImagesFolder);
+                    const { constraints, detectedAreas } = result;
                     
                     if (constraints.length > 0) {
                         if (DEBUG) console.log(`📋 Constraints for ${fileName}:`, constraints);
@@ -217,13 +214,13 @@ async function processImages(): Promise<void> {
                         if (DEBUG) console.log(`📋 No constraints detected for ${fileName}`);
                     }
                     
-                    // Collect puzzle data for JSON output
-                    parsedPuzzles.push({
-                        id: puzzleNumber,
-                        size: 6,
-                        prefilled: {}, // Will be added in next phase
-                        constraints: constraints
-                    });
+                    const visualizationImage = await drawDetectedSymbolsOnAreasImage(detectedAreas, constraintsImage, horizontalGrid, verticalGrid);
+                    
+                    if (DEBUG_SAVE_IMAGES && detectedAreas.length > 0) {
+                        await visualizationImage.write(`${constraintsImagesFolder}/${fileName}`);
+                    }
+                
+                    parsedPuzzle.constraints = constraints;
                     
                     processedImages++;
                     
@@ -235,14 +232,15 @@ async function processImages(): Promise<void> {
                 console.error(`Failed to process ${file}:`, error);
                 console.log(`Continuing with next image...`);
             }
+
+            parsedPuzzles.push(parsedPuzzle);
         }
     }
-    // Generate JSON output file
+
     if (parsedPuzzles.length > 0) {
-        // Sort puzzles by ID for consistent output
         parsedPuzzles.sort((a, b) => a.id - b.id);
         
-        const jsonOutput = JSON.stringify(parsedPuzzles, null, 4);
+        const jsonOutput = JSON.stringify(parsedPuzzles, null, 0);
         const outputPath = './app-data/parsed-images.json';
         
         writeFileSync(outputPath, jsonOutput, 'utf8');

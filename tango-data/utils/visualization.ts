@@ -1,3 +1,4 @@
+import { Jimp } from 'jimp';
 import { HorizontalGridDetection, VerticalGridDetection } from '../types/grid-types';
 import { ensureDirectoryExists } from './file-utils';
 
@@ -85,21 +86,17 @@ export async function drawGridLinesAndSave(
 
 /**
  * Draws orange borders on detected symbols on the constraints image
+ * Returns the image with visualizations drawn
  */
 export async function drawDetectedSymbolsOnAreasImage(
     detectedAreas: { x: number, y: number, w: number, h: number, symbol: string, position?: string }[],
-    puzzleNumber: number,
-    constraintsImagesFolder: string,
+    baseImage: typeof Jimp.prototype,
     horizontalGrid?: any,
     verticalGrid?: any
-): Promise<void> {
-    // Load the base constraints image (the greyscale constraints image)
-    const constraintsImagePath = `${constraintsImagesFolder}/tango-${puzzleNumber.toString().padStart(3, '0')}.png`;
-    const outputImagePath = `${constraintsImagesFolder}/tango-constraints-areas-${puzzleNumber.toString().padStart(3, '0')}.png`;
-    
+): Promise<typeof Jimp.prototype | null> {
     try {
-        const { Jimp } = await import('jimp');
-        const baseImage = await Jimp.read(constraintsImagePath);
+        // Clone the base image to avoid modifying the original
+        const workingImage = baseImage.clone();
         const orange = 0xFF8C00FF; // Orange color
         
         // Draw orange borders on all detected areas
@@ -108,32 +105,32 @@ export async function drawDetectedSymbolsOnAreasImage(
             for (let thickness = 0; thickness < 3; thickness++) {
                 // Top and bottom borders
                 for (let x = area.x; x < area.x + area.w; x++) {
-                    if (x >= 0 && x < baseImage.bitmap.width) {
+                    if (x >= 0 && x < workingImage.bitmap.width) {
                         // Top border
                         const topY = area.y + thickness;
-                        if (topY >= 0 && topY < baseImage.bitmap.height) {
-                            baseImage.setPixelColor(orange, x, topY);
+                        if (topY >= 0 && topY < workingImage.bitmap.height) {
+                            workingImage.setPixelColor(orange, x, topY);
                         }
                         // Bottom border
                         const bottomY = area.y + area.h - 1 - thickness;
-                        if (bottomY >= 0 && bottomY < baseImage.bitmap.height) {
-                            baseImage.setPixelColor(orange, x, bottomY);
+                        if (bottomY >= 0 && bottomY < workingImage.bitmap.height) {
+                            workingImage.setPixelColor(orange, x, bottomY);
                         }
                     }
                 }
 
                 // Left and right borders
                 for (let y = area.y; y < area.y + area.h; y++) {
-                    if (y >= 0 && y < baseImage.bitmap.height) {
+                    if (y >= 0 && y < workingImage.bitmap.height) {
                         // Left border
                         const leftX = area.x + thickness;
-                        if (leftX >= 0 && leftX < baseImage.bitmap.width) {
-                            baseImage.setPixelColor(orange, leftX, y);
+                        if (leftX >= 0 && leftX < workingImage.bitmap.width) {
+                            workingImage.setPixelColor(orange, leftX, y);
                         }
                         // Right border
                         const rightX = area.x + area.w - 1 - thickness;
-                        if (rightX >= 0 && rightX < baseImage.bitmap.width) {
-                            baseImage.setPixelColor(orange, rightX, y);
+                        if (rightX >= 0 && rightX < workingImage.bitmap.width) {
+                            workingImage.setPixelColor(orange, rightX, y);
                         }
                     }
                 }
@@ -169,21 +166,22 @@ export async function drawDetectedSymbolsOnAreasImage(
             // Draw combined text centered below the detection area with background box
             if (combinedText) {
                 const textCenterX = area.x + Math.floor(area.w / 2); // Center horizontally
-                drawPositionTextWithBackground(baseImage, combinedText, textCenterX, textStartY, orange, true); // true for center alignment
+                drawPositionTextWithBackground(workingImage, combinedText, textCenterX, textStartY, orange, true); // true for center alignment
             }
         }
         
         // Draw 6x6 debug grid with row/column numbering if grid data is available
         if (horizontalGrid && verticalGrid) {
-            drawDebugGrid(baseImage, horizontalGrid, verticalGrid);
+            drawDebugGrid(workingImage, horizontalGrid, verticalGrid);
         }
         
-        // Save the image with detected symbols
-        await baseImage.write(outputImagePath as `${string}.${string}`);
-        if (DEBUG) console.log(`🧡 Added orange borders for ${detectedAreas.length} detected symbols: ${outputImagePath}`);
+        // Return the image with visualizations drawn
+        if (DEBUG) console.log(`🧡 Added orange borders for ${detectedAreas.length} detected symbols`);
+        return workingImage;
         
     } catch (error) {
         console.error('Error drawing detected symbols on areas image:', error);
+        return null;
     }
 }
 
