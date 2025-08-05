@@ -12,18 +12,17 @@ export function getGreyscaleValue(image: any, x: number, y: number): number {
 
 /**
  * Measures the thickness of a horizontal line
+ * Currently returns 1 as thickness detection is not needed for the current pipeline
  */
-export function measureLineThickness(startX: number, endX: number, startY: number): number {
-    // Simple implementation - just return 1 for now
-    // Can be enhanced later if thickness detection is needed
+export function measureLineThickness(): number {
     return 1;
 }
 
 /**
  * Measures the thickness of a vertical line
+ * Currently returns 1 as thickness detection is not needed for the current pipeline
  */
-export function measureVerticalLineThickness(startY: number, endY: number, startX: number): number {
-    // For now, return 1 (can be enhanced later if needed)
+export function measureVerticalLineThickness(): number {
     return 1;
 } 
 
