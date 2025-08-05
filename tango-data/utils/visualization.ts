@@ -1,9 +1,7 @@
 import { Jimp } from 'jimp';
 import { HorizontalGridDetection, VerticalGridDetection } from '../types/grid-types';
+import { DEBUG, DEBUG_SAVE_IMAGES } from './constants';
 import { ensureDirectoryExists } from './file-utils';
-
-const DEBUG = false;
-const DEBUG_SAVE_IMAGES = true;
 
 /**
  * Draws the detected grid lines on the image and saves it

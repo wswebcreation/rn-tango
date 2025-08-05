@@ -1,7 +1,6 @@
 import { GridLine } from '../types/grid-types';
+import { DEBUG } from '../utils/constants';
 import { getGreyscaleValue, measureVerticalLineThickness } from '../utils/image-utils';
-
-const DEBUG = false;
 
 /**
  * Simplified: Only detect the left vertical line (fallback approach)

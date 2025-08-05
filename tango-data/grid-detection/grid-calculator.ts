@@ -1,6 +1,5 @@
 import { HorizontalGridDetection, VerticalGridDetection } from '../types/grid-types';
-
-const DEBUG = false;
+import { DEBUG } from '../utils/constants';
 
 /**
  * Creates complete horizontal grid from just the top line using square geometry  

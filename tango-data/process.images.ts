@@ -10,15 +10,12 @@ import {
     detectTopHorizontalLine
 } from './grid-detection/index';
 import { Puzzle } from './types/shared-types';
+import { DEBUG, DEBUG_SAVE_IMAGES, OCR } from './utils/constants';
 import { detectGridConstraints } from './utils/constraint-detection';
 import { ensureDirectoryExists } from './utils/file-utils';
+import { removeCellIcons } from './utils/image-utils';
 import { drawDetectedSymbolsOnAreasImage, drawGridLinesAndSave } from './utils/visualization';
 import getData from '/Users/wimselles/Git/games/tango/node_modules/@wdio/ocr-service/dist/utils/getData.js';
-
-// Debug flag - set to true to enable detailed logging
-const DEBUG = false;
-const DEBUG_SAVE_IMAGES = true;
-const OCR = false;
 
 // Configuration
 const processedImagesFolder = './tango-data/processed-images';
@@ -42,14 +39,14 @@ const constraintsImagesFolder = `${processedImagesFolder}/6. constraints`;
 const files = [
     './tango-data/thumbnails/tango-001.png',
     './tango-data/thumbnails/tango-002.png',
-    // './tango-data/thumbnails/tango-003.png',
-    // './tango-data/thumbnails/tango-004.png',
-    // './tango-data/thumbnails/tango-005.png',
-    // './tango-data/thumbnails/tango-006.png',
-    // './tango-data/thumbnails/tango-007.png',
-    // './tango-data/thumbnails/tango-008.png',
-    // './tango-data/thumbnails/tango-009.png',
-    // './tango-data/thumbnails/tango-010.png',
+    './tango-data/thumbnails/tango-003.png', //  wrong on 4,2-5,2, is showed a =, should be nothing
+    './tango-data/thumbnails/tango-004.png', // 6 false positives, due to seeing the bottom of the sun/moon as an  =
+    './tango-data/thumbnails/tango-005.png', // only 2?
+    './tango-data/thumbnails/tango-006.png',
+    './tango-data/thumbnails/tango-007.png', // 7 false positives, due to seeing the bottom of the sun/moon as an  =, but also because the grid is not 100 centered
+    './tango-data/thumbnails/tango-008.png', // 6 false positives, due to seeing the bottom of the sun/moon as an  =, also missed a x
+    './tango-data/thumbnails/tango-009.png', // 1 wrong one due to the mouse that is in the image
+    './tango-data/thumbnails/tango-010.png', // 3 false positives, due to seeing the bottom of the sun/moon as an
     // The bad images where undo can't be found
     // Not 100% correct: 27, 196, 
 ];
@@ -188,6 +185,8 @@ async function processImages(): Promise<void> {
                         .clone()
                         .crop({ x: gridX, y: gridY, w: gridWidth, h: gridHeight })
                     if (DEBUG_SAVE_IMAGES) await gridCroppedImage.write(`${gridCroppedImagesFolder}/${fileName}`);
+                    const blockOutImage = removeCellIcons(gridCroppedImage);
+                    if (DEBUG_SAVE_IMAGES) await blockOutImage.write(`${gridCroppedImagesFolder}/blockOut-${fileName}`);
                 } else {
                     // Save failed detection to grid-failed folder
                     const failedFolder = gridFailedImagesFolder;
@@ -204,9 +203,8 @@ async function processImages(): Promise<void> {
                         .greyscale()
                         .contrast(1);
 
-                    // Detect constraints on grid borders
-                    const result = await detectGridConstraints(constraintsImage, horizontalGrid, verticalGrid, puzzleNumber, constraintsImagesFolder);
-                    const { constraints, detectedAreas } = result;
+                    const { constraints, detectedAreas, imageWithDetectedSymbols } = await detectGridConstraints(constraintsImage, horizontalGrid, verticalGrid, puzzleNumber, constraintsImagesFolder);
+                    if (DEBUG_SAVE_IMAGES) await imageWithDetectedSymbols.write(`${constraintsImagesFolder}/imageWithDetectedSymbols-${fileName}`);
                     
                     if (constraints.length > 0) {
                         if (DEBUG) console.log(`📋 Constraints for ${fileName}:`, constraints);

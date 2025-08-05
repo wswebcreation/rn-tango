@@ -3,12 +3,13 @@ import { CellCoordinate, Constraint, ConstraintType } from '../types/shared-type
 import {
     CONSTRAINT_DETECTION_HALF_SIZE,
     CONSTRAINT_DETECTION_SIZE,
+    DEBUG,
     GRID_LINES_COUNT,
     GRID_SIZE,
     MIN_DETECTION_AREA_SIZE
-} from './constraint-config';
+} from './constants';
+import { removeCellIcons } from './image-utils';
 
-const DEBUG = false;
 
 /**
  * Detects x and = symbols on grid borders
@@ -20,10 +21,15 @@ export async function detectGridConstraints(
     verticalGrid: any,
     puzzleNumber: number,
     constraintsImagesFolder: string
-): Promise<{ constraints: Constraint[], detectedAreas: { x: number, y: number, w: number, h: number, symbol: string, position?: string }[] }> {
+): Promise<{
+    constraints: Constraint[],
+    detectedAreas: { x: number, y: number, w: number, h: number, symbol: string, position?: string }[],
+    imageWithDetectedSymbols: typeof Jimp.prototype | null
+}> {
+    const imageWithDetectedSymbols = removeCellIcons(image.clone());
     const constraints: Constraint[] = [];
     const detectedAreas: { x: number, y: number, w: number, h: number, symbol: string, position?: string }[] = [];
-    if (DEBUG) console.log(`🔍 Starting constraint detection on ${image.bitmap.width}x${image.bitmap.height} image`);
+    if (DEBUG) console.log(`🔍 Starting constraint detection on ${imageWithDetectedSymbols.bitmap.width}x${imageWithDetectedSymbols.bitmap.height} image`);
     
     // Calculate grid cell dimensions
     const gridWidth = verticalGrid.gridWidth;
@@ -32,8 +38,8 @@ export async function detectGridConstraints(
     const cellHeight = gridHeight / GRID_SIZE;
     
     // Get image dimensions for boundary checking
-    const imageWidth = image.bitmap.width;
-    const imageHeight = image.bitmap.height;
+    const imageWidth = imageWithDetectedSymbols.bitmap.width;
+    const imageHeight = imageWithDetectedSymbols.bitmap.height;
     
     // Check vertical grid lines (between adjacent columns)
     for (let col = 0; col < GRID_LINES_COUNT; col++) { // Vertical lines between columns
@@ -103,7 +109,7 @@ export async function detectGridConstraints(
             const cropH = Math.min(CONSTRAINT_DETECTION_SIZE, imageHeight - cropY);
             
             if (cropW >= MIN_DETECTION_AREA_SIZE && cropH >= MIN_DETECTION_AREA_SIZE) {
-                const horizontalGridRegion = image
+                const horizontalGridRegion = imageWithDetectedSymbols
                     .clone()
                     .crop({
                         x: cropX, 
@@ -143,7 +149,7 @@ export async function detectGridConstraints(
         }
     }
     
-    return { constraints, detectedAreas };
+    return { constraints, detectedAreas, imageWithDetectedSymbols };
 }
 
 /**
