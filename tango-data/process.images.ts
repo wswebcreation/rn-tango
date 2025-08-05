@@ -20,6 +20,7 @@ const gridDetectedImagesFolder = `${processedImagesFolder}/4a. grid-detected`;
 const gridFailedImagesFolder = `${processedImagesFolder}/4b. grid-failed`;  
 const gridCroppedImagesFolder = `${processedImagesFolder}/5. grid-cropped`;
 const constraintsImagesFolder = `${processedImagesFolder}/6. constraints`;
+const prefilledImagesFolder = `${processedImagesFolder}/7. prefilled`;
 
 /**
  * Logs:
@@ -48,7 +49,21 @@ const files = [
 
 async function processImages(): Promise<void> {
     const startTime = Date.now();
-    const puzzleNumbersToSkip = [27, 196];
+    const puzzleNumbersToSkip = [
+        9, // the mouse is in the image and picked up as an x
+        27, // person and shoes as icons
+        108, // mouse and paperclip as icons
+        124, // flag and red sign as icons
+        135, // world and heart as icons
+        157, // hearts and bears as icons
+        173, // light bulbs and jigsaw as icons
+        202, // hat and star as icons
+        208, // christmas tree and snowman as icons
+        220, // cats and microphone as icons
+        248, // guitars and butterflies as icons
+        262, // candle and flower as icons
+        263, // halloween pumpkin and ghost as icons
+    ];
     let processedImages = 0;
     const parsedPuzzles: Puzzle[] = [];
     
