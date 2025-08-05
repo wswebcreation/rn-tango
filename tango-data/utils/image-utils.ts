@@ -28,9 +28,12 @@ export function measureVerticalLineThickness(startY: number, endY: number, start
 } 
 
 export function removeCellIcons(image: typeof Jimp.prototype): typeof Jimp.prototype {
+    // Clone the image to avoid modifying the original
+    const workingImage = image.clone();
+    
     // Let's remove the moon/sun from the images so we can only focus on the constraints
     // First determine the grids, it's a 6*6 grid, so we can determine the size of a cell
-    const cellWidth = Math.floor(image.bitmap.width / GRID_SIZE);
+    const cellWidth = Math.floor(workingImage.bitmap.width / GRID_SIZE);
     
     const centerAreaWidth = Math.floor(cellWidth * ICON_REMOVAL_PERCENTAGE);
     if(DEBUG) console.log(`Center area to clear: ${centerAreaWidth}x${centerAreaWidth} pixels`);
@@ -56,8 +59,8 @@ export function removeCellIcons(image: typeof Jimp.prototype): typeof Jimp.proto
             for (let y = centerStartY; y < centerEndY; y++) {
                 for (let x = centerStartX; x < centerEndX; x++) {
                     // Ensure we don't go beyond image boundaries
-                    if (x < image.bitmap.width && y < image.bitmap.height) {
-                        image.setPixelColor(blockOutColor, x, y);
+                    if (x < workingImage.bitmap.width && y < workingImage.bitmap.height) {
+                        workingImage.setPixelColor(blockOutColor, x, y);
                     }
                 }
             }
@@ -66,7 +69,7 @@ export function removeCellIcons(image: typeof Jimp.prototype): typeof Jimp.proto
     
     if(DEBUG) console.log(`✅ Removed icons from ${GRID_SIZE * GRID_SIZE} cells, preserving ${marginX}px horizontal and ${marginY}px vertical borders`);
     
-    return image;
+    return workingImage;
 }
 
 export interface CropBoundaries {
