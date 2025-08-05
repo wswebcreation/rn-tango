@@ -46,6 +46,8 @@ const files = [
     // Not 100% correct: 27, 196, 
 ];
 
+// const files = readdirSync('tango-data/thumbnails/').map(file => `tango-data/thumbnails/${file}`);
+
 function printValidationSummary(validationResults: { fileName: string; result: ValidationResult }[]): void {
     const successfulValidations = validationResults.filter(v => v.result.success);
     const failedValidations = validationResults.filter(v => !v.result.success);
