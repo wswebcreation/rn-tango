@@ -18,4 +18,7 @@ export const DEBUG_SAVE_IMAGES = true;
 // OCR flags
 export const OCR = false;
 
-export const ICON_REMOVAL_PERCENTAGE = 0.55;
+export const ICON_REMOVAL_PERCENTAGE = 0.6;
+
+// Grid cropping configuration
+export const GRID_CORNER_PADDING = 5; 

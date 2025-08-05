@@ -4,69 +4,67 @@ import { DEBUG, DEBUG_SAVE_IMAGES } from './constants';
 import { ensureDirectoryExists } from './file-utils';
 
 /**
- * Draws the detected grid lines on the image and saves it
+ * Draws the crop boundaries (with padding) on the image and saves it
  */
-export async function drawGridLinesAndSave(
+export async function drawCropBoundariesAndSave(
     image: any, 
     horizontalGrid: HorizontalGridDetection | null, 
     verticalGrid: VerticalGridDetection | null, 
     puzzleNumber: number,
-    gridDetectedImagesFolder: string
+    gridDetectedImagesFolder: string,
+    cropBoundaries?: { x: number, y: number, width: number, height: number }
 ): Promise<void> {
     // Create a copy of the image to draw on
     const imageWithLines = image.clone();
     
-    // Define transparent green color (RGBA: green with 50% opacity)
-    const transparentGreen = 0x00FF0080; // Green with 128 alpha (50% transparency)
-    
-    // Draw horizontal lines if detected
-    if (horizontalGrid?.topLine) {
-        const { y, startX, endX } = horizontalGrid.topLine;
-        for (let x = startX; x <= endX; x++) {
-            imageWithLines.setPixelColor(transparentGreen, x, y);
-            // Draw a slightly thicker line (2 pixels) for better visibility
-            if (y + 1 < imageWithLines.bitmap.height) {
-                imageWithLines.setPixelColor(transparentGreen, x, y + 1);
+    // Draw crop boundaries in green (shows actual crop area with padding)
+    if (cropBoundaries) {
+        const transparentGreen = 0x00FF0080; // Green with 50% transparency
+        const { x: cropX, y: cropY, width: cropWidth, height: cropHeight } = cropBoundaries;
+        
+        // Draw top crop boundary
+        for (let x = cropX; x < cropX + cropWidth; x++) {
+            if (x >= 0 && x < imageWithLines.bitmap.width && cropY >= 0 && cropY < imageWithLines.bitmap.height) {
+                imageWithLines.setPixelColor(transparentGreen, x, cropY);
+                if (cropY + 1 < imageWithLines.bitmap.height) {
+                    imageWithLines.setPixelColor(transparentGreen, x, cropY + 1);
+                }
             }
         }
-        if (DEBUG) console.log(`Drew top line at y=${y} from x=${startX} to x=${endX}`);
-    }
-    
-    if (horizontalGrid?.bottomLine) {
-        const { y, startX, endX } = horizontalGrid.bottomLine;
-        for (let x = startX; x <= endX; x++) {
-            imageWithLines.setPixelColor(transparentGreen, x, y);
-            // Draw a slightly thicker line (2 pixels) for better visibility
-            if (y - 1 >= 0) {
-                imageWithLines.setPixelColor(transparentGreen, x, y - 1);
+        
+        // Draw bottom crop boundary
+        const bottomY = cropY + cropHeight - 1;
+        for (let x = cropX; x < cropX + cropWidth; x++) {
+            if (x >= 0 && x < imageWithLines.bitmap.width && bottomY >= 0 && bottomY < imageWithLines.bitmap.height) {
+                imageWithLines.setPixelColor(transparentGreen, x, bottomY);
+                if (bottomY - 1 >= 0) {
+                    imageWithLines.setPixelColor(transparentGreen, x, bottomY - 1);
+                }
             }
         }
-        if (DEBUG) console.log(`Drew bottom line at y=${y} from x=${startX} to x=${endX}`);
-    }
-    
-    // Draw vertical lines if detected
-    if (verticalGrid?.leftLine) {
-        const { x, startY, endY } = verticalGrid.leftLine;
-        for (let y = startY; y <= endY; y++) {
-            imageWithLines.setPixelColor(transparentGreen, x, y);
-            // Draw a slightly thicker line (2 pixels) for better visibility
-            if (x + 1 < imageWithLines.bitmap.width) {
-                imageWithLines.setPixelColor(transparentGreen, x + 1, y);
+        
+        // Draw left crop boundary
+        for (let y = cropY; y < cropY + cropHeight; y++) {
+            if (y >= 0 && y < imageWithLines.bitmap.height && cropX >= 0 && cropX < imageWithLines.bitmap.width) {
+                imageWithLines.setPixelColor(transparentGreen, cropX, y);
+                if (cropX + 1 < imageWithLines.bitmap.width) {
+                    imageWithLines.setPixelColor(transparentGreen, cropX + 1, y);
+                }
             }
         }
-        if (DEBUG) console.log(`Drew left line at x=${x} from y=${startY} to y=${endY}`);
-    }
-    
-    if (verticalGrid?.rightLine) {
-        const { x, startY, endY } = verticalGrid.rightLine;
-        for (let y = startY; y <= endY; y++) {
-            imageWithLines.setPixelColor(transparentGreen, x, y);
-            // Draw a slightly thicker line (2 pixels) for better visibility
-            if (x - 1 >= 0) {
-                imageWithLines.setPixelColor(transparentGreen, x - 1, y);
+        
+        // Draw right crop boundary
+        const rightX = cropX + cropWidth - 1;
+        for (let y = cropY; y < cropY + cropHeight; y++) {
+            if (y >= 0 && y < imageWithLines.bitmap.height && rightX >= 0 && rightX < imageWithLines.bitmap.width) {
+                imageWithLines.setPixelColor(transparentGreen, rightX, y);
+                if (rightX - 1 >= 0) {
+                    imageWithLines.setPixelColor(transparentGreen, rightX - 1, y);
+                }
             }
         }
-        if (DEBUG) console.log(`Drew right line at x=${x} from y=${startY} to y=${endY}`);
+        
+        if (DEBUG) console.log(`Drew crop boundaries with padding: x=${cropX}, y=${cropY}, w=${cropWidth}, h=${cropHeight}`);
     }
     
     // Ensure the detected folder exists

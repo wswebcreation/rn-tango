@@ -10,11 +10,11 @@ import {
     detectTopHorizontalLine
 } from './grid-detection/index';
 import { Puzzle } from './types/shared-types';
-import { DEBUG, DEBUG_SAVE_IMAGES, OCR } from './utils/constants';
+import { DEBUG, DEBUG_SAVE_IMAGES, GRID_CORNER_PADDING, OCR } from './utils/constants';
 import { detectGridConstraints } from './utils/constraint-detection';
 import { ensureDirectoryExists } from './utils/file-utils';
 import { removeCellIcons } from './utils/image-utils';
-import { drawDetectedSymbolsOnAreasImage, drawGridLinesAndSave } from './utils/visualization';
+import { drawCropBoundariesAndSave, drawDetectedSymbolsOnAreasImage } from './utils/visualization';
 import getData from '/Users/wimselles/Git/games/tango/node_modules/@wdio/ocr-service/dist/utils/getData.js';
 
 // Configuration
@@ -169,18 +169,41 @@ async function processImages(): Promise<void> {
                     if (verticalGrid) {
                         if (DEBUG) console.log(`  Vertical:`, verticalGrid);
                     }
-                    await drawGridLinesAndSave(greyImage, horizontalGrid, verticalGrid, puzzleNumber, gridDetectedImagesFolder);
                     
-                    // 5. Crop the image based on the detected grid lines
-                    ensureDirectoryExists(gridCroppedImagesFolder);
+                    // 5. Calculate crop boundaries (with rounded corner padding)
                     const topLine = horizontalGrid?.topLine;
                     const bottomLine = horizontalGrid?.bottomLine;
                     const leftLine = verticalGrid?.leftLine;
                     const rightLine = verticalGrid?.rightLine;
-                    const gridWidth = (rightLine?.x || 0) - (leftLine?.x || 0);
-                    const gridHeight = (bottomLine?.y || 0) - (topLine?.y || 0);
-                    const gridX = leftLine?.x || 0;
-                    const gridY = topLine?.y || 0;
+                    
+                    // Account for rounded corners: add padding on each side
+                    const CORNER_PADDING = GRID_CORNER_PADDING;
+                    const rawGridX = leftLine?.x || 0;
+                    const rawGridY = topLine?.y || 0;
+                    const rawGridWidth = (rightLine?.x || 0) - rawGridX;
+                    const rawGridHeight = (bottomLine?.y || 0) - rawGridY;
+                    
+                    // Expand grid boundaries with padding, but stay within image bounds
+                    const { width: imageWidth, height: imageHeight } = croppedImage.bitmap;
+                    const gridX = Math.max(0, rawGridX - CORNER_PADDING); // Extend left to capture left rounded corner
+                    const gridY = rawGridY; // Keep detected top line position (already accurate)
+                    const gridWidth = Math.min(imageWidth - gridX, rawGridWidth + (CORNER_PADDING * 2)); // Extend left + right
+                    const gridHeight = Math.min(imageHeight - gridY, rawGridHeight + CORNER_PADDING); // Extend down only
+                    
+                    // Pass crop boundaries to visualization
+                    const cropBoundaries = {
+                        x: gridX,
+                        y: gridY, 
+                        width: gridWidth,
+                        height: gridHeight
+                    };
+                    await drawCropBoundariesAndSave(greyImage, horizontalGrid, verticalGrid, puzzleNumber, gridDetectedImagesFolder, cropBoundaries);
+                    
+                    // Apply the crop
+                    ensureDirectoryExists(gridCroppedImagesFolder);
+                    
+                    if (DEBUG) console.log(`📐 Grid crop: ${rawGridX},${rawGridY} ${rawGridWidth}×${rawGridHeight} → ${gridX},${gridY} ${gridWidth}×${gridHeight} (+${CORNER_PADDING}px padding)`);
+                    
                     gridCroppedImage = await croppedImage
                         .clone()
                         .crop({ x: gridX, y: gridY, w: gridWidth, h: gridHeight })
