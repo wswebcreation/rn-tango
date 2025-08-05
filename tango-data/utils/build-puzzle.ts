@@ -1,19 +1,39 @@
 import { CellCoordinate, CellValue, Puzzle } from "../types/shared-types";
 
-export function buildAndValidateTangoPuzzle(parsedPuzzle: Puzzle): Puzzle {
+export interface ValidationResult {
+    success: boolean;
+    puzzle?: Puzzle;
+    error?: string;
+    details?: string[];
+}
+
+export function buildAndValidateTangoPuzzle(parsedPuzzle: Puzzle): ValidationResult {
     console.log(`🔍 Validating Tango puzzle ${parsedPuzzle.id}...`);
     
-    // Create board matrix with prefilled cells
-    const boardMatrix = createBoardMatrix(parsedPuzzle);
-    
-    // Validate the puzzle structure and rules
-    validatePuzzleStructure(parsedPuzzle);
-    validatePrefilledCells(parsedPuzzle, boardMatrix);
-    validateConstraints(parsedPuzzle, boardMatrix);
-    validatePuzzleSolvability(parsedPuzzle, boardMatrix);
-    
-    console.log(`✅ Puzzle ${parsedPuzzle.id} validation passed!`);
-    return parsedPuzzle;
+    try {
+        // Create board matrix with prefilled cells
+        const boardMatrix = createBoardMatrix(parsedPuzzle);
+        
+        // Validate the puzzle structure and rules
+        validatePuzzleStructure(parsedPuzzle);
+        validatePrefilledCells(parsedPuzzle, boardMatrix);
+        validateConstraints(parsedPuzzle, boardMatrix);
+        validatePuzzleSolvability(parsedPuzzle, boardMatrix);
+        
+        console.log(`✅ Puzzle ${parsedPuzzle.id} validation passed!`);
+        return {
+            success: true,
+            puzzle: parsedPuzzle
+        };
+    } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.log(`❌ Puzzle ${parsedPuzzle.id} validation failed: ${errorMessage}`);
+        return {
+            success: false,
+            error: errorMessage,
+            details: errorMessage.split('\n').filter(line => line.trim())
+        };
+    }
 }
 
 /**

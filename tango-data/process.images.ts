@@ -10,7 +10,7 @@ import { calculateCropBoundaries, processAndSaveGridImages, type CropBoundaries,
 import { getPrefilledData } from './utils/prefill-detection';
 import { drawCropBoundariesAndSave, drawDetectedSymbolsOnAreasImage } from './utils/visualization';
 import getData from '/Users/wimselles/Git/games/tango/node_modules/@wdio/ocr-service/dist/utils/getData.js';
-import { buildAndValidateTangoPuzzle } from './utils/build-puzzle';
+import { buildAndValidateTangoPuzzle, ValidationResult } from './utils/build-puzzle';
 
 // Configuration
 const processedImagesFolder = './tango-data/processed-images';
@@ -48,6 +48,54 @@ const files = [
 
 // const files = readdirSync('tango-data/thumbnails/').map(file => `tango-data/thumbnails/${file}`);
 
+function printValidationSummary(validationResults: { fileName: string; result: ValidationResult }[]): void {
+    const successfulValidations = validationResults.filter(v => v.result.success);
+    const failedValidations = validationResults.filter(v => !v.result.success);
+    
+    console.log(`\n📊 VALIDATION SUMMARY`);
+    console.log(`═══════════════════════════════════════════════════════════════`);
+    console.log(`📈 Total puzzles processed: ${validationResults.length}`);
+    console.log(`✅ Successfully validated: ${successfulValidations.length}`);
+    console.log(`❌ Failed validation: ${failedValidations.length}`);
+    
+    if (failedValidations.length > 0) {
+        console.log(`\n💥 FAILED VALIDATIONS:`);
+        console.log(`─────────────────────────────────────────────────────────────`);
+        
+        failedValidations.forEach(({ fileName, result }, index) => {
+            console.log(`\n${index + 1}. 📄 ${fileName}`);
+            console.log(`   🚫 Error: ${result.error}`);
+            
+            if (result.details && result.details.length > 0) {
+                console.log(`   📝 Details:`);
+                result.details.forEach(detail => {
+                    console.log(`      • ${detail}`);
+                });
+            }
+        });
+    }
+    
+    if (successfulValidations.length > 0) {
+        console.log(`\n🎉 SUCCESSFUL VALIDATIONS:`);
+        console.log(`─────────────────────────────────────────────────────────────`);
+        
+        const successfulPuzzleIds = successfulValidations
+            .map(v => v.result.puzzle?.id)
+            .filter(id => id !== undefined)
+            .sort((a, b) => a! - b!);
+        
+        console.log(`📋 Puzzle IDs: ${successfulPuzzleIds.join(', ')}`);
+    }
+    
+    // Calculate success rate
+    const successRate = validationResults.length > 0 
+        ? ((successfulValidations.length / validationResults.length) * 100).toFixed(1)
+        : '0.0';
+    
+    console.log(`\n🎯 Validation Success Rate: ${successRate}%`);
+    console.log(`═══════════════════════════════════════════════════════════════`);
+}
+
 async function processImages(): Promise<void> {
     const startTime = Date.now();
     const puzzleNumbersToSkip = [
@@ -67,6 +115,7 @@ async function processImages(): Promise<void> {
     ];
     let processedImages = 0;
     const parsedPuzzles: Puzzle[] = [];
+    const validationResults: { fileName: string; result: ValidationResult }[] = [];
     
     for (const file of files) {
         const fileName = file.split('/').pop();
@@ -231,10 +280,22 @@ async function processImages(): Promise<void> {
                 // 8. We now need to check if we can build the Tango puzzle based on the constraints and prefilled data
                 // If we can, we can save the puzzle to the parsed-images.json file
                 if(Object.keys(parsedPuzzle.prefilled).length > 0) {
-                    const tangoPuzzle = buildAndValidateTangoPuzzle(parsedPuzzle);
-                    parsedPuzzles.push(tangoPuzzle);
+                    const validationResult = buildAndValidateTangoPuzzle(parsedPuzzle);
+                    validationResults.push({ fileName, result: validationResult });
+                    
+                    if (validationResult.success && validationResult.puzzle) {
+                        parsedPuzzles.push(validationResult.puzzle);
+                    }
                 } else {
                     if (DEBUG) console.log(`❌ No prefilled data found for: ${fileName}`);
+                    validationResults.push({ 
+                        fileName, 
+                        result: { 
+                            success: false, 
+                            error: "No prefilled data found",
+                            details: ["Puzzle must have at least one prefilled cell to be valid"]
+                        } 
+                    });
                 }
             
             } catch (error) {
@@ -253,6 +314,9 @@ async function processImages(): Promise<void> {
         writeFileSync(outputPath, jsonOutput, 'utf8');
         console.log(`\n📄 Generated parsed-images.json with ${parsedPuzzles.length} puzzles: ${outputPath}`);
     }
+
+    // Print validation summary
+    printValidationSummary(validationResults);
 
     const endTime = Date.now();
 
