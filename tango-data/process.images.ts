@@ -36,7 +36,7 @@ const prefilledImagesFolder = `${processedImagesFolder}/5. prefilled`;
 // Option 2: Process all files in thumbnails folder
 // const files = readdirSync('tango-data/thumbnails/').map(file => `tango-data/thumbnails/${file}`);
 // Option 3: Process a range of puzzle numbers (e.g., puzzles 20-30)
-const files = generatePuzzleFileRange(50, 60);
+const files = generatePuzzleFileRange(60, 80);
 
 async function processImages(): Promise<void> {
     const startTime = Date.now();
