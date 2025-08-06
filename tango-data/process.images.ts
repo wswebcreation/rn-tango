@@ -1,5 +1,6 @@
 import { Jimp } from 'jimp';
 import { detectGrid, type GridDetectionResult } from './grid-detection/index';
+import { ManualPrefilledData } from './types/processing-types';
 import { Puzzle } from './types/shared-types';
 import { buildAndValidateTangoPuzzle, ValidationResult } from './utils/build-puzzle';
 import { DEBUG, DEBUG_SAVE_IMAGES } from './utils/constants';
@@ -7,7 +8,7 @@ import { detectGridConstraints } from './utils/constraint-detection';
 import { ensureDirectoryExists, removeDirectory } from './utils/file-utils';
 import { calculateCropBoundaries, processAndSaveGridImages, type CropBoundaries, type GridProcessingFolders } from './utils/image-utils';
 import { filterFilesToProcess, loadExistingPuzzles, logProcessingSummary, mergeAndSortPuzzles, savePuzzlesJson } from './utils/incremental-processing';
-import { getPrefilledData } from './utils/prefill-detection';
+import { getPrefilledDataWithManual } from './utils/prefill-detection';
 import { printValidationSummary } from './utils/validation-summary';
 import { updateVersionFile } from './utils/version-manager';
 import { drawCropBoundariesAndSave, drawDetectedSymbolsOnAreasImage } from './utils/visualization';
@@ -23,17 +24,14 @@ const constraintsImagesFolder = `${processedImagesFolder}/4. constraints`;
 const prefilledImagesFolder = `${processedImagesFolder}/5. prefilled`;
 // Option 1: Process specific files (hardcoded list)
 const files = [
-    './tango-data/thumbnails/tango-024.png',
-    // './tango-data/thumbnails/tango-025.png', // not correct
-    // './tango-data/thumbnails/tango-039.png', // not correct
+    './tango-data/thumbnails/tango-025.png', // not correct
+    './tango-data/thumbnails/tango-039.png', // not correct
     // './tango-data/thumbnails/tango-067.png', // failed
-    // './tango-data/thumbnails/tango-079.png', // not correct
-    './tango-data/thumbnails/tango-085.png',
-    './tango-data/thumbnails/tango-114.png',
+    './tango-data/thumbnails/tango-079.png', // not correct
     // './tango-data/thumbnails/tango-130.png', // failed
-    // './tango-data/thumbnails/tango-152.png', // not correct
-    // './tango-data/thumbnails/tango-162.png', // not correct
-    // './tango-data/thumbnails/tango-179.png', // not correct
+    './tango-data/thumbnails/tango-152.png', // not correct
+    './tango-data/thumbnails/tango-162.png', // not correct
+    './tango-data/thumbnails/tango-179.png', // not correct
     // './tango-data/thumbnails/tango-260.png', // failed
     // './tango-data/thumbnails/tango-288.png', // failed
 ];
@@ -41,6 +39,54 @@ const files = [
 // const files = readdirSync('tango-data/thumbnails/').map(file => `tango-data/thumbnails/${file}`);
 // Option 3: Process a range of puzzle numbers (e.g., puzzles 20-30)
 // const files = generatePuzzleFileRange(226, 302);
+
+// Some puzzles are hard to detect the prefilled data due to different icons, so we can manually add it here
+const manuallyPrefilledPuzzleData: ManualPrefilledData = {
+    25: {
+        "1,2": "🌑",
+        "1,3": "☀️",
+        "2,1": "☀️",
+        "2,4": "☀️",
+        "3,1": "☀️",
+        "3,4": "🌑",
+        "4,2": "☀️",
+        "4,3": "🌑"
+    },
+    39: {
+        "1,1": "🌑",
+        "1,2": "🌑",
+        "2,1": "☀️",
+        "3,3": "🌑",
+        "3,4": "☀️",
+        "4,3": "🌑"
+    },
+    79: {
+        "0,4": "🌑",
+        "1,0": "☀️",
+        "4,5": "🌑",
+        "5,1": "☀️"
+    },
+    152: {
+        "2,2": "🌑",
+        "2,3": "🌑",
+        "3,2": "☀️",
+        "3,3": "🌑"
+    },
+    162: {
+        "0,0": "🌑",
+        "5,5": "☀️"
+    },
+    179: {
+        "1,0": "🌑",
+        "1,1": "☀️",
+        "2,0": "🌑",
+        "2,1": "🌑",
+        "3,4": "🌑",
+        "3,5": "☀️",
+        "4,4": "☀️",
+        "4,5": "🌑"
+    }
+}
 
 async function processImages(): Promise<void> {
     removeDirectory(processedImagesFolder);
@@ -172,11 +218,10 @@ async function processImages(): Promise<void> {
                 // 5. Find the prefilled fields with their icons
                 if(parsedPuzzle.constraints.length > 0) {
                     ensureDirectoryExists(prefilledImagesFolder);
-                    const {prefilledData, prefilledImage} = await getPrefilledData(gridCroppedImage, prefilledImagesFolder, fileName);
+                    const {prefilledData, prefilledImage} = await getPrefilledDataWithManual(gridCroppedImage, prefilledImagesFolder, fileName, manuallyPrefilledPuzzleData);
                     if (DEBUG_SAVE_IMAGES) await prefilledImage.write(`${prefilledImagesFolder}/${fileName}`);
                     
                     parsedPuzzle.prefilled = prefilledData;
-
                 
                     processedImages++;
                 } else {

@@ -14,3 +14,5 @@ export interface PuzzleMergeResult {
   allPuzzles: Puzzle[];
   hasNewPuzzles: boolean;
 }
+
+export type ManualPrefilledData = Record<number, Record<string, string>>;

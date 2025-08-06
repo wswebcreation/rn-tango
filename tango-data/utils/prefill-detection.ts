@@ -1,4 +1,5 @@
 import { Jimp } from "jimp";
+import { ManualPrefilledData } from "../types/processing-types";
 import { CellCoordinate, PrefilledData } from "../types/shared-types";
 import { DEBUG, GRID_SIZE } from "./constants";
 import { drawPrefilledCellsVisualization } from "./visualization";
@@ -189,5 +190,53 @@ function analyzeIconType(image: typeof Jimp.prototype, cellX: number, cellY: num
         // Default to moon if no clear winner or no colored pixels found
         if (DEBUG) console.log(`  ⚠️ No clear icon color detected, defaulting to moon`);
         return "🌑";
+    }
+}
+
+/**
+ * Gets prefilled data using manual data if available, otherwise automatic detection
+ * @param gridCroppedImage - The cropped grid image
+ * @param prefilledImagesFolder - Folder to save visualization images
+ * @param fileName - Name of the image file
+ * @param manualPrefilledData - Manual prefilled data for specific puzzles
+ * @returns Object containing prefilled data and visualization image
+ */
+export async function getPrefilledDataWithManual(
+    gridCroppedImage: typeof Jimp.prototype, 
+    prefilledImagesFolder: string, 
+    fileName: string,
+    manualPrefilledData: ManualPrefilledData
+): Promise<{
+    prefilledData: PrefilledData,
+    prefilledImage: typeof Jimp.prototype
+}> {
+    const puzzleNumber = parseInt(fileName.split('-')[1].split('.')[0]);
+    
+    if (manualPrefilledData[puzzleNumber]) {
+        if (DEBUG) console.log(`📋 Using manual prefilled data for puzzle ${puzzleNumber}`);
+        
+        const prefilledData: PrefilledData = manualPrefilledData[puzzleNumber] as PrefilledData;
+        
+        // Calculate cell dimensions for visualization
+        const cellWidth = Math.floor(gridCroppedImage.bitmap.width / GRID_SIZE);
+        const cellHeight = Math.floor(gridCroppedImage.bitmap.height / GRID_SIZE);
+        
+        // Create visualization image with manual data
+        const visualizationImage = await drawPrefilledCellsVisualization(
+            prefilledData,
+            gridCroppedImage,
+            cellWidth,
+            cellHeight
+        );
+        
+        const prefilledImage = visualizationImage || gridCroppedImage.clone();
+        
+        if (DEBUG) console.log(`✅ Manual prefilled data processed for puzzle ${puzzleNumber}:`, prefilledData);
+        
+        return { prefilledData, prefilledImage };
+    } else {
+        // Use automatic detection
+        if (DEBUG) console.log(`🔍 Using automatic detection for puzzle ${puzzleNumber}`);
+        return await getPrefilledData(gridCroppedImage, prefilledImagesFolder, fileName);
     }
 }
