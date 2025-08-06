@@ -26,18 +26,22 @@ We use the [playlist](https://www.youtube.com/playlist?list=PLLE2dY85AtnfSpGLBlq
       const match = link.match(/v=([\w-]+)/);
       const videoId = match ? match[1] : null;
 
-      const indexEl = el.querySelector('#index');
-      const index = indexEl ? parseInt(indexEl.textContent.trim(), 10) : null;
+      const titleEl = el.querySelector('#video-title');
+      const titleText = titleEl?.textContent.trim() || '';
+      const idMatch = titleText.match(/#(\d+)/); // ✅ extract first #number
+      const puzzleId = idMatch ? parseInt(idMatch[1], 10) : null;
 
-      if (!videoId || !index) return null;
+      if (!videoId || !puzzleId) return null;
 
-      const padded = String(index).padStart(3, '0');
+      const padded = String(puzzleId).padStart(3, '0');
       return {
         number: padded,
         filename: `tango-${padded}.png`,
         url: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
       };
     }).filter(Boolean);
+
+    result.sort((a, b) => parseInt(a.number, 10) - parseInt(b.number, 10));
 
     const jsonStr = JSON.stringify(result, null, 2);
     const blob = new Blob([jsonStr], { type: 'application/json' });
@@ -50,7 +54,7 @@ We use the [playlist](https://www.youtube.com/playlist?list=PLLE2dY85AtnfSpGLBlq
     a.click();
     document.body.removeChild(a);
 
-    console.log('✅ JSON file ready and download triggered');
+    console.log('✅ JSON file sorted by puzzle number and download triggered');
   })();
   ```
 
