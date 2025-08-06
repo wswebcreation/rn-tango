@@ -164,7 +164,7 @@ async function processImages(): Promise<void> {
                     if (DEBUG) console.log(`❌ No grid cropped image or grid data found for: ${fileName}`);
                 }
 
-                // 5. Prefill the puzzle
+                // 5. Find the prefilled fields with their icons
                 if(parsedPuzzle.constraints.length > 0) {
                     ensureDirectoryExists(prefilledImagesFolder);
                     const {prefilledData, prefilledImage} = await getPrefilledData(gridCroppedImage, prefilledImagesFolder, fileName);

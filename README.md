@@ -2,13 +2,16 @@
 
 I'd love to play the LinkedIn Tango game, but there is no history. So I've downloaded the history and created my own Tango React Native App with [EXPO](https://expo.dev/). **This project only supports iOS, NOT Android**
 
+## About Tango
+Tango is a logic puzzle game where you place sun (☀️) and moon (🌑) symbols on a grid while satisfying equality (=) and inequality (x) constraints between cells.
+
 ## Collect Tango data
 
 We use the [playlist](https://www.youtube.com/playlist?list=PLLE2dY85AtnfSpGLBlq9YQwxQQxLVi66w) of Daily Puzzles to get the history, then follow these steps
 
 1. Open playlist [url](https://www.youtube.com/playlist?list=PLLE2dY85AtnfSpGLBlq9YQwxQQxLVi66w)
 2. Fully scroll to the bottom so all videos are shown
-3. Paste the following code in the browser, This will prompt you to download a file named `tango-thumbnails.json`
+3. Paste the following code in the browser, This will prompt you to download a file named `tango-thumbnails.json`, download it to the [`tango-data/`](./tango-data/)-folder
 
   <details>
 
@@ -55,7 +58,9 @@ We use the [playlist](https://www.youtube.com/playlist?list=PLLE2dY85AtnfSpGLBlq
 
 4. In the folder [./tango-data](./tango-data/) you will find a script called `download-thumbnails.js` which can be executed by running `npm run download-thumbnails`. This will store all thumbnails to [./tango-data/thumbnails/](./tango-data/thumbnails/)
 
-5. Parse the data (need to think of something smart to do this) into a structure like this
+5. Parse the data
+
+The images need to be processed into the following structure
 
 ### Data structure
 
@@ -132,6 +137,42 @@ Column 2:  ...
            🌑   ← (2,2)
            ❌   ← (3,2) must be ☀️
 ```
+
+### Start parsing
+
+The file [`./tango-data/process.images.ts`](./tango-data/process.images.ts) can parse the just saved thumbnails into JSON based on the following:
+
+- You can select the thumbnails based on:
+  - A predefined file list
+  - Scan the folder
+  - Provide files `25-99`
+- The images will be parsed based on
+  1. Cut the thumbnails based on "default" boundaries
+  2. Converted to greyscale images so they then be processed better
+  3. Based on the greyscaled images we try to determine the top line of the grid and then calculate the grid boundaries so it can be cut out more precisely 
+  4. Determine the constraints (`x` and `=` symbols on the borders) This will be done by:
+    - calculating the cell size and "remove" the icons
+    - increase contrast to highlight the symbols even more and removing the existing borders
+    - use `x` and `=` templates to do matching and calculate their position
+    - draw the data on an temporary image so they can be debugged
+    - return data where the constraints are found
+  5. Find the prefilled fields and their icons
+  6. Check if the found constraints and prefilled fields result in a puzzle that can be played
+  7. Output the data to a [`puzzles.json`](./app-data/puzzles.json) file, new puzzles will be added, existing ones will not be overwritten. We also store a [`version.json`](./app-data/version.json) file which will be pushed so the app can determine if new games can be downloaded
+
+The images can be processed by running the following in a terminal
+
+```bash
+npm run process-images
+```
+
+This is for running it once. During development/bugfixes of the script you can run
+
+```bash
+npm run process-images:watch
+```
+
+**IMPORTANT:** The image with the grid needs to have suns/moons/prefilled fields. Other icons **CAN NOT** be detected and need to be excluded, see the `puzzleNumbersToSkip` const to add them
 
 ## Contribute
 
