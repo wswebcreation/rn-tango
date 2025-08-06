@@ -4,7 +4,7 @@ import { Puzzle } from './types/shared-types';
 import { buildAndValidateTangoPuzzle, ValidationResult } from './utils/build-puzzle';
 import { DEBUG, DEBUG_SAVE_IMAGES } from './utils/constants';
 import { detectGridConstraints } from './utils/constraint-detection';
-import { ensureDirectoryExists, generatePuzzleFileRange, removeDirectory } from './utils/file-utils';
+import { ensureDirectoryExists, removeDirectory } from './utils/file-utils';
 import { calculateCropBoundaries, processAndSaveGridImages, type CropBoundaries, type GridProcessingFolders } from './utils/image-utils';
 import { filterFilesToProcess, loadExistingPuzzles, logProcessingSummary, mergeAndSortPuzzles, savePuzzlesJson } from './utils/incremental-processing';
 import { getPrefilledData } from './utils/prefill-detection';
@@ -22,21 +22,25 @@ const gridCroppedImagesFolder = `${processedImagesFolder}/3c. grid-cropped`;
 const constraintsImagesFolder = `${processedImagesFolder}/4. constraints`;
 const prefilledImagesFolder = `${processedImagesFolder}/5. prefilled`;
 // Option 1: Process specific files (hardcoded list)
-// const files = [
-//     './tango-data/thumbnails/tango-001.png',
-//     './tango-data/thumbnails/tango-002.png',
-//     './tango-data/thumbnails/tango-003.png',
-//     './tango-data/thumbnails/tango-004.png',
-//     './tango-data/thumbnails/tango-005.png',
-//     './tango-data/thumbnails/tango-006.png',
-//     './tango-data/thumbnails/tango-007.png',
-//     './tango-data/thumbnails/tango-008.png',
-//     './tango-data/thumbnails/tango-010.png',
-// ];
+const files = [
+    './tango-data/thumbnails/tango-024.png',
+    // './tango-data/thumbnails/tango-025.png', // not correct
+    // './tango-data/thumbnails/tango-039.png', // not correct
+    // './tango-data/thumbnails/tango-067.png', // failed
+    // './tango-data/thumbnails/tango-079.png', // not correct
+    './tango-data/thumbnails/tango-085.png',
+    './tango-data/thumbnails/tango-114.png',
+    // './tango-data/thumbnails/tango-130.png', // failed
+    // './tango-data/thumbnails/tango-152.png', // not correct
+    // './tango-data/thumbnails/tango-162.png', // not correct
+    // './tango-data/thumbnails/tango-179.png', // not correct
+    // './tango-data/thumbnails/tango-260.png', // failed
+    // './tango-data/thumbnails/tango-288.png', // failed
+];
 // Option 2: Process all files in thumbnails folder
 // const files = readdirSync('tango-data/thumbnails/').map(file => `tango-data/thumbnails/${file}`);
 // Option 3: Process a range of puzzle numbers (e.g., puzzles 20-30)
-const files = generatePuzzleFileRange(226, 302);
+// const files = generatePuzzleFileRange(226, 302);
 
 async function processImages(): Promise<void> {
     removeDirectory(processedImagesFolder);
@@ -45,19 +49,17 @@ async function processImages(): Promise<void> {
     const startTime = Date.now();
     const { puzzles: existingPuzzles, existingIds } = loadExistingPuzzles();
     const puzzleNumbersToSkip = [
-        24, // halloween pumpkin and ghost as icons
-        25, // candle and flower as icons
-        39, // guitars and butterflies as icons
-        67, // cats and microphone as icons
-        79, // christmas tree and snowman as icons
-        85, // hat and star as icons
-        114, // light bulbs and jigsaw as icons
-        130, // hearts and bears as icons
-        152, // world and heart as icons
-        162, // flag and red sign as icons
-        179, // mouse and paperclip as icons
-        260, // person and shoes as icons
-        288, // Person and shark
+        1,
+        // 25, // candle and flower as icons
+        // 39, // guitars and butterflies as icons
+        // 67, // cats and microphone as icons
+        // 79, // christmas tree and snowman as icons
+        // 130, // hearts and bears as icons
+        // 152, // world and heart as icons
+        // 162, // flag and red sign as icons
+        // 179, // mouse and paperclip as icons
+        // 260, // person and shoes as icons
+        // 288, // Person and shark
     ];
     const { filesToProcess } = filterFilesToProcess(files, existingIds, puzzleNumbersToSkip);
     
