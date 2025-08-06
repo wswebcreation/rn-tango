@@ -4,7 +4,7 @@ import { Puzzle } from './types/shared-types';
 import { buildAndValidateTangoPuzzle, ValidationResult } from './utils/build-puzzle';
 import { DEBUG, DEBUG_SAVE_IMAGES } from './utils/constants';
 import { detectGridConstraints } from './utils/constraint-detection';
-import { ensureDirectoryExists } from './utils/file-utils';
+import { ensureDirectoryExists, generatePuzzleFileRange } from './utils/file-utils';
 import { calculateCropBoundaries, processAndSaveGridImages, type CropBoundaries, type GridProcessingFolders } from './utils/image-utils';
 import { filterFilesToProcess, loadExistingPuzzles, logProcessingSummary, mergeAndSortPuzzles, savePuzzlesJson } from './utils/incremental-processing';
 import { getPrefilledData } from './utils/prefill-detection';
@@ -18,26 +18,25 @@ const croppedImagesFolder = `${processedImagesFolder}/1. cropped`;
 const greyImagesFolder = `${processedImagesFolder}/2. grey`;
 const gridDetectedImagesFolder = `${processedImagesFolder}/3a. grid-detected`;
 const gridFailedImagesFolder = `${processedImagesFolder}/3b. grid-failed`;  
-const gridCroppedImagesFolder = `${processedImagesFolder}3c. grid-cropped`;
+const gridCroppedImagesFolder = `${processedImagesFolder}/3c. grid-cropped`;
 const constraintsImagesFolder = `${processedImagesFolder}/4. constraints`;
 const prefilledImagesFolder = `${processedImagesFolder}/5. prefilled`;
 // Option 1: Process specific files (hardcoded list)
-const files = [
-    './tango-data/thumbnails/tango-001.png',
-    './tango-data/thumbnails/tango-002.png',
-    './tango-data/thumbnails/tango-003.png',
-    './tango-data/thumbnails/tango-004.png',
-    './tango-data/thumbnails/tango-005.png',
-    './tango-data/thumbnails/tango-006.png',
-    './tango-data/thumbnails/tango-007.png',
-    './tango-data/thumbnails/tango-008.png',
-    './tango-data/thumbnails/tango-010.png',
-];
+// const files = [
+//     './tango-data/thumbnails/tango-001.png',
+//     './tango-data/thumbnails/tango-002.png',
+//     './tango-data/thumbnails/tango-003.png',
+//     './tango-data/thumbnails/tango-004.png',
+//     './tango-data/thumbnails/tango-005.png',
+//     './tango-data/thumbnails/tango-006.png',
+//     './tango-data/thumbnails/tango-007.png',
+//     './tango-data/thumbnails/tango-008.png',
+//     './tango-data/thumbnails/tango-010.png',
+// ];
 // Option 2: Process all files in thumbnails folder
 // const files = readdirSync('tango-data/thumbnails/').map(file => `tango-data/thumbnails/${file}`);
-
 // Option 3: Process a range of puzzle numbers (e.g., puzzles 20-30)
-// const files = generatePuzzleFileRange(20, 30); // Processes tango-020.png through tango-030.png
+const files = generatePuzzleFileRange(50, 60);
 
 async function processImages(): Promise<void> {
     const startTime = Date.now();
