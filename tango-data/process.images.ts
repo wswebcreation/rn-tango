@@ -24,16 +24,8 @@ const constraintsImagesFolder = `${processedImagesFolder}/4. constraints`;
 const prefilledImagesFolder = `${processedImagesFolder}/5. prefilled`;
 // Option 1: Process specific files (hardcoded list)
 const files = [
-    './tango-data/thumbnails/tango-025.png', // not correct
-    './tango-data/thumbnails/tango-039.png', // not correct
-    // './tango-data/thumbnails/tango-067.png', // failed
-    './tango-data/thumbnails/tango-079.png', // not correct
-    // './tango-data/thumbnails/tango-130.png', // failed
-    './tango-data/thumbnails/tango-152.png', // not correct
-    './tango-data/thumbnails/tango-162.png', // not correct
-    './tango-data/thumbnails/tango-179.png', // not correct
-    // './tango-data/thumbnails/tango-260.png', // failed
-    // './tango-data/thumbnails/tango-288.png', // failed
+    './tango-data/thumbnails/tango-260.png', // failed
+    './tango-data/thumbnails/tango-288.png', // failed
 ];
 // Option 2: Process all files in thumbnails folder
 // const files = readdirSync('tango-data/thumbnails/').map(file => `tango-data/thumbnails/${file}`);
@@ -60,11 +52,35 @@ const manuallyPrefilledPuzzleData: ManualPrefilledData = {
         "3,4": "☀️",
         "4,3": "🌑"
     },
+    67:{
+        "0,1": "🌑",
+        "1,0": "🌑",
+        "1,1": "☀️",
+        "1,3": "☀️",
+        "1,4": "🌑",
+        "2,1": "🌑",
+        "2,5": "🌑",
+        "3,1": "☀️",
+        "3,4": "☀️",
+        "4,1": "🌑",
+        "4,5": "🌑",
+        "5,3": "🌑",
+        "5,4": "☀️"
+    },
     79: {
         "0,4": "🌑",
         "1,0": "☀️",
         "4,5": "🌑",
         "5,1": "☀️"
+    },
+    130: {
+        "0,0": "🌑",
+        "0,1": "☀️",
+        "0,2": "☀️",
+        "1,1": "☀️",
+        "2,0": "☀️",
+        "2,1": "🌑",
+        "2,2": "🌑"
     },
     152: {
         "2,2": "🌑",
@@ -85,7 +101,35 @@ const manuallyPrefilledPuzzleData: ManualPrefilledData = {
         "3,5": "☀️",
         "4,4": "☀️",
         "4,5": "🌑"
-    }
+    },
+    // 260: {
+    //     "0,0": "🌑",
+    //     "0,2": "🌑",
+    //     "0,5": "🌑",
+    //     "1,2": "🌑",
+    //     "2,2": "🌑",
+    //     "2,3": "🌑",
+    //     "5,0": "🌑",
+    //     "5,2": "🌑",
+    //     "5,5": "🌑"
+    // },
+    // 288: {
+    //     "0,0": "🌑",
+    //     "0,4": "🌑",
+    //     "0,5": "🌑",
+    //     "1,0": "🌑",
+    //     "1,1": "🌑",
+    //     "1,2": "🌑",
+    //     "2,0": "☀️",
+    //     "2,1": "🌑",
+    //     "2,2": "🌑",
+    //     "3,0": "🌑",
+    //     "3,3": "☀️",
+    //     "3,5": "🌑",
+    //     "4,3": "☀️",
+    //     "4,4": "🌑",
+    //     "4,5": "☀️"
+    // },
 }
 
 async function processImages(): Promise<void> {
@@ -96,14 +140,6 @@ async function processImages(): Promise<void> {
     const { puzzles: existingPuzzles, existingIds } = loadExistingPuzzles();
     const puzzleNumbersToSkip = [
         1,
-        // 25, // candle and flower as icons
-        // 39, // guitars and butterflies as icons
-        // 67, // cats and microphone as icons
-        // 79, // christmas tree and snowman as icons
-        // 130, // hearts and bears as icons
-        // 152, // world and heart as icons
-        // 162, // flag and red sign as icons
-        // 179, // mouse and paperclip as icons
         // 260, // person and shoes as icons
         // 288, // Person and shark
     ];

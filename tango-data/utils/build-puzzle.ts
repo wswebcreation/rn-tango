@@ -94,6 +94,7 @@ function validatePrefilledCells(puzzle: Puzzle, boardMatrix: (CellValue | undefi
     }
     
     if (violations.length > 0) {
+        console.log(`🚨 Prefilled cells: ${JSON.stringify(puzzle.prefilled, null, 2)}`);
         throw new Error(`Prefilled cells validation failed:\n${violations.join('\n')}`);
     }
     
