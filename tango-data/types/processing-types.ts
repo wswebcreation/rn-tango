@@ -16,3 +16,5 @@ export interface PuzzleMergeResult {
 }
 
 export type ManualPrefilledData = Record<number, Record<string, string>>;
+
+export type ManualConstraintsData = Record<number, [string, string, string][]>;

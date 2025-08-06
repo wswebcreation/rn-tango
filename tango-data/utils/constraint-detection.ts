@@ -1,4 +1,5 @@
 import { Jimp } from 'jimp';
+import { ManualConstraintsData } from '../types/processing-types';
 import { CellCoordinate, Constraint, ConstraintType } from '../types/shared-types';
 import {
     CONSTRAINT_DETECTION_HALF_SIZE,
@@ -1395,4 +1396,128 @@ function detectEqualsLinesApproach2WithDebug(region: typeof Jimp.prototype): num
     if (DEBUG) console.log(`       ✅ Final = score: ${finalScore.toFixed(1)}`);
     
     return finalScore;
+}
+
+/**
+ * Calculates visualization areas for manual constraints
+ */
+function calculateManualConstraintAreas(
+    constraints: Constraint[],
+    horizontalGrid: any,
+    verticalGrid: any,
+    imageWidth: number,
+    imageHeight: number
+): { x: number, y: number, w: number, h: number, symbol: string, position?: string }[] {
+    const detectedAreas: { x: number, y: number, w: number, h: number, symbol: string, position?: string }[] = [];
+    
+    // Calculate cell dimensions
+    const cellWidth = Math.floor(imageWidth / GRID_SIZE);
+    const cellHeight = Math.floor(imageHeight / GRID_SIZE);
+    
+    for (const [startCoord, endCoord, constraintType] of constraints) {
+        const [startRow, startCol] = startCoord.split(',').map(Number);
+        const [endRow, endCol] = endCoord.split(',').map(Number);
+        
+        // Determine if this is a horizontal or vertical constraint
+        const isHorizontal = startRow === endRow;
+        
+        if (isHorizontal) {
+            // Horizontal constraint (between columns)
+            const row = startRow;
+            const leftCol = Math.min(startCol, endCol);
+            const rightCol = Math.max(startCol, endCol);
+            
+            // Position between the two cells
+            const x = leftCol * cellWidth + cellWidth; // Right edge of left cell
+            const y = row * cellHeight + cellHeight * 0.3; // 30% down from top of cell
+            const w = CONSTRAINT_DETECTION_SIZE;
+            const h = cellHeight * 0.4; // 40% of cell height
+            
+            detectedAreas.push({
+                x: Math.max(0, Math.min(x - CONSTRAINT_DETECTION_HALF_SIZE, imageWidth - w)),
+                y: Math.max(0, Math.min(y, imageHeight - h)),
+                w,
+                h,
+                symbol: constraintType,
+                position: `between cells (${row},${leftCol}) and (${row},${rightCol})`
+            });
+        } else {
+            // Vertical constraint (between rows)
+            const col = startCol;
+            const topRow = Math.min(startRow, endRow);
+            const bottomRow = Math.max(startRow, endRow);
+            
+            // Position between the two cells
+            const x = col * cellWidth + cellWidth * 0.3; // 30% right from left edge of cell
+            const y = topRow * cellHeight + cellHeight; // Bottom edge of top cell
+            const w = cellWidth * 0.4; // 40% of cell width
+            const h = CONSTRAINT_DETECTION_SIZE;
+            
+            detectedAreas.push({
+                x: Math.max(0, Math.min(x, imageWidth - w)),
+                y: Math.max(0, Math.min(y - CONSTRAINT_DETECTION_HALF_SIZE, imageHeight - h)),
+                w,
+                h,
+                symbol: constraintType,
+                position: `between cells (${topRow},${col}) and (${bottomRow},${col})`
+            });
+        }
+    }
+    
+    return detectedAreas;
+}
+
+/**
+ * Detects constraints using manual data if available, otherwise automatic detection
+ * @param image - The constraints image
+ * @param horizontalGrid - Horizontal grid data
+ * @param verticalGrid - Vertical grid data
+ * @param puzzleNumber - The puzzle number
+ * @param constraintsImagesFolder - Folder to save constraint images
+ * @param manualConstraintsData - Manual constraints data for specific puzzles
+ * @returns Object containing constraints, detected areas, and visualization image
+ */
+export async function detectGridConstraintsWithManual(
+    image: typeof Jimp.prototype, 
+    horizontalGrid: any, 
+    verticalGrid: any,
+    puzzleNumber: number,
+    constraintsImagesFolder: string,
+    manualConstraintsData: ManualConstraintsData
+): Promise<{
+    constraints: Constraint[],
+    detectedAreas: { x: number, y: number, w: number, h: number, symbol: string, position?: string }[],
+    imageWithDetectedSymbols: typeof Jimp.prototype | null
+}> {
+    // Check if manual data exists for this puzzle
+    if (manualConstraintsData[puzzleNumber]) {
+        if (DEBUG) console.log(`📋 Using manual constraints data for puzzle ${puzzleNumber}`);
+        
+        const manualConstraints = manualConstraintsData[puzzleNumber];
+        const constraints: Constraint[] = manualConstraints.map(([start, end, type]) => [
+            start as CellCoordinate,
+            end as CellCoordinate,
+            type as ConstraintType
+        ]);
+        
+        // Create a visualization image 
+        const imageWithDetectedSymbols = removeCellIcons(image.clone());
+        
+        // Calculate visualization areas for manual constraints
+        const detectedAreas = calculateManualConstraintAreas(
+            constraints,
+            horizontalGrid,
+            verticalGrid,
+            image.bitmap.width,
+            image.bitmap.height
+        );
+        
+        if (DEBUG) console.log(`✅ Manual constraints processed for puzzle ${puzzleNumber}:`, constraints);
+        
+        return { constraints, detectedAreas, imageWithDetectedSymbols };
+    } else {
+        // Use automatic detection
+        if (DEBUG) console.log(`🔍 Using automatic detection for puzzle ${puzzleNumber}`);
+        return await detectGridConstraints(image, horizontalGrid, verticalGrid, puzzleNumber, constraintsImagesFolder);
+    }
 } 

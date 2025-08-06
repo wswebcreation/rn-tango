@@ -1,10 +1,9 @@
 import { Jimp } from 'jimp';
 import { detectGrid, type GridDetectionResult } from './grid-detection/index';
-import { ManualPrefilledData } from './types/processing-types';
 import { Puzzle } from './types/shared-types';
 import { buildAndValidateTangoPuzzle, ValidationResult } from './utils/build-puzzle';
-import { DEBUG, DEBUG_SAVE_IMAGES } from './utils/constants';
-import { detectGridConstraints } from './utils/constraint-detection';
+import { DEBUG, DEBUG_SAVE_IMAGES, MANUALLY_CONSTRAINTS_PUZZLES, MANUALLY_PREFILLED_PUZZLES } from './utils/constants';
+import { detectGridConstraintsWithManual } from './utils/constraint-detection';
 import { ensureDirectoryExists, removeDirectory } from './utils/file-utils';
 import { calculateCropBoundaries, processAndSaveGridImages, type CropBoundaries, type GridProcessingFolders } from './utils/image-utils';
 import { filterFilesToProcess, loadExistingPuzzles, logProcessingSummary, mergeAndSortPuzzles, savePuzzlesJson } from './utils/incremental-processing';
@@ -32,105 +31,6 @@ const files = [
 // Option 3: Process a range of puzzle numbers (e.g., puzzles 20-30)
 // const files = generatePuzzleFileRange(226, 302);
 
-// Some puzzles are hard to detect the prefilled data due to different icons, so we can manually add it here
-const manuallyPrefilledPuzzleData: ManualPrefilledData = {
-    25: {
-        "1,2": "🌑",
-        "1,3": "☀️",
-        "2,1": "☀️",
-        "2,4": "☀️",
-        "3,1": "☀️",
-        "3,4": "🌑",
-        "4,2": "☀️",
-        "4,3": "🌑"
-    },
-    39: {
-        "1,1": "🌑",
-        "1,2": "🌑",
-        "2,1": "☀️",
-        "3,3": "🌑",
-        "3,4": "☀️",
-        "4,3": "🌑"
-    },
-    67:{
-        "0,1": "🌑",
-        "1,0": "🌑",
-        "1,1": "☀️",
-        "1,3": "☀️",
-        "1,4": "🌑",
-        "2,1": "🌑",
-        "2,5": "🌑",
-        "3,1": "☀️",
-        "3,4": "☀️",
-        "4,1": "🌑",
-        "4,5": "🌑",
-        "5,3": "🌑",
-        "5,4": "☀️"
-    },
-    79: {
-        "0,4": "🌑",
-        "1,0": "☀️",
-        "4,5": "🌑",
-        "5,1": "☀️"
-    },
-    130: {
-        "0,0": "🌑",
-        "0,1": "☀️",
-        "0,2": "☀️",
-        "1,1": "☀️",
-        "2,0": "☀️",
-        "2,1": "🌑",
-        "2,2": "🌑"
-    },
-    152: {
-        "2,2": "🌑",
-        "2,3": "🌑",
-        "3,2": "☀️",
-        "3,3": "🌑"
-    },
-    162: {
-        "0,0": "🌑",
-        "5,5": "☀️"
-    },
-    179: {
-        "1,0": "🌑",
-        "1,1": "☀️",
-        "2,0": "🌑",
-        "2,1": "🌑",
-        "3,4": "🌑",
-        "3,5": "☀️",
-        "4,4": "☀️",
-        "4,5": "🌑"
-    },
-    // 260: {
-    //     "0,0": "🌑",
-    //     "0,2": "🌑",
-    //     "0,5": "🌑",
-    //     "1,2": "🌑",
-    //     "2,2": "🌑",
-    //     "2,3": "🌑",
-    //     "5,0": "🌑",
-    //     "5,2": "🌑",
-    //     "5,5": "🌑"
-    // },
-    // 288: {
-    //     "0,0": "🌑",
-    //     "0,4": "🌑",
-    //     "0,5": "🌑",
-    //     "1,0": "🌑",
-    //     "1,1": "🌑",
-    //     "1,2": "🌑",
-    //     "2,0": "☀️",
-    //     "2,1": "🌑",
-    //     "2,2": "🌑",
-    //     "3,0": "🌑",
-    //     "3,3": "☀️",
-    //     "3,5": "🌑",
-    //     "4,3": "☀️",
-    //     "4,4": "🌑",
-    //     "4,5": "☀️"
-    // },
-}
 
 async function processImages(): Promise<void> {
     removeDirectory(processedImagesFolder);
@@ -230,7 +130,7 @@ async function processImages(): Promise<void> {
                         .greyscale()
                         .contrast(1);
 
-                    const { constraints, detectedAreas, imageWithDetectedSymbols } = await detectGridConstraints(constraintsImage, horizontalGrid, verticalGrid, puzzleNumber, constraintsImagesFolder);
+                    const { constraints, detectedAreas, imageWithDetectedSymbols } = await detectGridConstraintsWithManual(constraintsImage, horizontalGrid, verticalGrid, puzzleNumber, constraintsImagesFolder, MANUALLY_CONSTRAINTS_PUZZLES);
                     if (DEBUG_SAVE_IMAGES) await imageWithDetectedSymbols.write(`${constraintsImagesFolder}/imageWithDetectedSymbols-${fileName}`);
                     
                     if (constraints.length > 0) {
@@ -254,7 +154,7 @@ async function processImages(): Promise<void> {
                 // 5. Find the prefilled fields with their icons
                 if(parsedPuzzle.constraints.length > 0) {
                     ensureDirectoryExists(prefilledImagesFolder);
-                    const {prefilledData, prefilledImage} = await getPrefilledDataWithManual(gridCroppedImage, prefilledImagesFolder, fileName, manuallyPrefilledPuzzleData);
+                    const {prefilledData, prefilledImage} = await getPrefilledDataWithManual(gridCroppedImage, prefilledImagesFolder, fileName, MANUALLY_PREFILLED_PUZZLES);
                     if (DEBUG_SAVE_IMAGES) await prefilledImage.write(`${prefilledImagesFolder}/${fileName}`);
                     
                     parsedPuzzle.prefilled = prefilledData;
