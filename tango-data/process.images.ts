@@ -4,7 +4,7 @@ import { Puzzle } from './types/shared-types';
 import { buildAndValidateTangoPuzzle, ValidationResult } from './utils/build-puzzle';
 import { DEBUG, DEBUG_SAVE_IMAGES } from './utils/constants';
 import { detectGridConstraints } from './utils/constraint-detection';
-import { ensureDirectoryExists, generatePuzzleFileRange } from './utils/file-utils';
+import { ensureDirectoryExists, generatePuzzleFileRange, removeDirectory } from './utils/file-utils';
 import { calculateCropBoundaries, processAndSaveGridImages, type CropBoundaries, type GridProcessingFolders } from './utils/image-utils';
 import { filterFilesToProcess, loadExistingPuzzles, logProcessingSummary, mergeAndSortPuzzles, savePuzzlesJson } from './utils/incremental-processing';
 import { getPrefilledData } from './utils/prefill-detection';
@@ -36,25 +36,28 @@ const prefilledImagesFolder = `${processedImagesFolder}/5. prefilled`;
 // Option 2: Process all files in thumbnails folder
 // const files = readdirSync('tango-data/thumbnails/').map(file => `tango-data/thumbnails/${file}`);
 // Option 3: Process a range of puzzle numbers (e.g., puzzles 20-30)
-const files = generatePuzzleFileRange(251, 278);
+const files = generatePuzzleFileRange(24, 50);
 
 async function processImages(): Promise<void> {
+    removeDirectory(processedImagesFolder);
+    ensureDirectoryExists(processedImagesFolder);
+
     const startTime = Date.now();
     const { puzzles: existingPuzzles, existingIds } = loadExistingPuzzles();
     const puzzleNumbersToSkip = [
-        9, // the mouse is in the image and picked up as an x
-        27, // person and shoes as icons
-        108, // mouse and paperclip as icons
-        124, // flag and red sign as icons
-        135, // world and heart as icons
-        157, // hearts and bears as icons
-        173, // light bulbs and jigsaw as icons
-        202, // hat and star as icons
-        208, // christmas tree and snowman as icons
-        220, // cats and microphone as icons
-        248, // guitars and butterflies as icons
-        262, // candle and flower as icons
-        263, // halloween pumpkin and ghost as icons
+        24, // halloween pumpkin and ghost as icons
+        25, // candle and flower as icons
+        39, // guitars and butterflies as icons
+        67, // cats and microphone as icons
+        79, // christmas tree and snowman as icons
+        85, // hat and star as icons
+        114, // light bulbs and jigsaw as icons
+        130, // hearts and bears as icons
+        152, // world and heart as icons
+        162, // flag and red sign as icons
+        179, // mouse and paperclip as icons
+        260, // person and shoes as icons
+        288, // Person and shark
     ];
     const { filesToProcess } = filterFilesToProcess(files, existingIds, puzzleNumbersToSkip);
     

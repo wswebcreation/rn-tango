@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, rmdirSync } from 'fs';
 
 /**
  * Helper function to ensure directory exists
@@ -6,6 +6,12 @@ import { existsSync, mkdirSync } from 'fs';
 export function ensureDirectoryExists(dirPath: string): void {
     if (!existsSync(dirPath)) {
         mkdirSync(dirPath, { recursive: true });
+    }
+}
+
+export function removeDirectory(dirPath: string): void {
+    if (existsSync(dirPath)) {
+        rmdirSync(dirPath, { recursive: true });
     }
 }
 
