@@ -15,9 +15,6 @@ export const GRID_LINES_COUNT = GRID_SIZE - 1; // 5 lines between 6 rows/columns
 export const DEBUG = false;
 export const DEBUG_SAVE_IMAGES = true;
 
-// OCR flags
-export const OCR = false;
-
 // Icon removal configuration
 // export const ICON_REMOVAL_COLOR = 0x00000000; // Black color to block out the center area
 export const ICON_REMOVAL_COLOR = 0xFFFFFFFF; // White color to block out the center area

@@ -48,7 +48,6 @@
   "devDependencies": {
     "@babel/core": "^7.25.2",
     "@types/react": "~19.0.10",
-    "@wdio/ocr-service": "^2.2.7",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~9.2.0",
     "jimp": "^1.6.0",

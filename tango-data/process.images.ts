@@ -1,39 +1,26 @@
-import { readFileSync, writeFileSync } from 'fs';
 import { Jimp } from 'jimp';
-import { remote } from 'webdriverio';
 import { detectGrid, type GridDetectionResult } from './grid-detection/index';
 import { Puzzle } from './types/shared-types';
 import { buildAndValidateTangoPuzzle, ValidationResult } from './utils/build-puzzle';
-import { DEBUG, DEBUG_SAVE_IMAGES, OCR } from './utils/constants';
+import { DEBUG, DEBUG_SAVE_IMAGES } from './utils/constants';
 import { detectGridConstraints } from './utils/constraint-detection';
 import { ensureDirectoryExists } from './utils/file-utils';
 import { calculateCropBoundaries, processAndSaveGridImages, type CropBoundaries, type GridProcessingFolders } from './utils/image-utils';
+import { filterFilesToProcess, loadExistingPuzzles, logProcessingSummary, mergeAndSortPuzzles, savePuzzlesJson } from './utils/incremental-processing';
 import { getPrefilledData } from './utils/prefill-detection';
 import { printValidationSummary } from './utils/validation-summary';
 import { updateVersionFile } from './utils/version-manager';
 import { drawCropBoundariesAndSave, drawDetectedSymbolsOnAreasImage } from './utils/visualization';
-import getData from '/Users/wimselles/Git/games/tango/node_modules/@wdio/ocr-service/dist/utils/getData.js';
 
 // Configuration
 const processedImagesFolder = './tango-data/processed-images';
 const croppedImagesFolder = `${processedImagesFolder}/1. cropped`;
-const ocrImagesFolder = `${processedImagesFolder}/2a. ocr`;
-const undoDetectionFailedImagesFolder = `${processedImagesFolder}/2b. undo-detection-failed`;
-const greyImagesFolder = `${processedImagesFolder}/3. grey`;
-const gridDetectedImagesFolder = `${processedImagesFolder}/4a. grid-detected`;
-const gridFailedImagesFolder = `${processedImagesFolder}/4b. grid-failed`;  
-const gridCroppedImagesFolder = `${processedImagesFolder}/5. grid-cropped`;
-const constraintsImagesFolder = `${processedImagesFolder}/6. constraints`;
-const prefilledImagesFolder = `${processedImagesFolder}/7. prefilled`;
-
-/**
- * Logs:
- * - with OCR and debugging enabled: ~ 105 seconds
- * - with OCR: no real change
- * - without OCR: ~ 35 seconds
- * - without saving images: ~ 20 seconds
- */
-
+const greyImagesFolder = `${processedImagesFolder}/2. grey`;
+const gridDetectedImagesFolder = `${processedImagesFolder}/3a. grid-detected`;
+const gridFailedImagesFolder = `${processedImagesFolder}/3b. grid-failed`;  
+const gridCroppedImagesFolder = `${processedImagesFolder}3c. grid-cropped`;
+const constraintsImagesFolder = `${processedImagesFolder}/4. constraints`;
+const prefilledImagesFolder = `${processedImagesFolder}/5. prefilled`;
 const files = [
     './tango-data/thumbnails/tango-001.png',
     './tango-data/thumbnails/tango-002.png',
@@ -44,14 +31,13 @@ const files = [
     './tango-data/thumbnails/tango-007.png',
     './tango-data/thumbnails/tango-008.png',
     './tango-data/thumbnails/tango-010.png',
-    // The bad images where undo can't be found
-    // Not 100% correct: 27, 196, 
 ];
 
 // const files = readdirSync('tango-data/thumbnails/').map(file => `tango-data/thumbnails/${file}`);
 
 async function processImages(): Promise<void> {
     const startTime = Date.now();
+    const { puzzles: existingPuzzles, existingIds } = loadExistingPuzzles();
     const puzzleNumbersToSkip = [
         9, // the mouse is in the image and picked up as an x
         27, // person and shoes as icons
@@ -67,13 +53,15 @@ async function processImages(): Promise<void> {
         262, // candle and flower as icons
         263, // halloween pumpkin and ghost as icons
     ];
+    const { filesToProcess } = filterFilesToProcess(files, existingIds, puzzleNumbersToSkip);
+    
     let processedImages = 0;
-    const parsedPuzzles: Puzzle[] = [];
+    const newPuzzles: Puzzle[] = [];
     const validationResults: { fileName: string; result: ValidationResult }[] = [];
     
-    for (const file of files) {
+    for (const file of filesToProcess) {
         const fileName = file.split('/').pop();
-        if (!fileName) continue; // Skip if filename is undefined
+        if (!fileName) continue; 
         const puzzleNumber = parseInt(fileName.split('-')[1].split('.')[0]);
         const parsedPuzzle: Puzzle = {
             id: puzzleNumber,
@@ -86,7 +74,7 @@ async function processImages(): Promise<void> {
         let gridCroppedImage = null;
         let constraintsImage = null;
 
-        if (!puzzleNumbersToSkip.includes(puzzleNumber)) {
+        {
             try {
                 // 1. Start with cropping the image based on default bounds
                 ensureDirectoryExists(croppedImagesFolder);
@@ -103,48 +91,8 @@ async function processImages(): Promise<void> {
                 });
             
                 if (DEBUG_SAVE_IMAGES) await croppedImage.write(`${croppedImagesFolder}/${fileName}`);
-            
-                if (OCR) {
-                    // 2. Use the @wdio/ocr module to get the Undo text bounds and crop the image from there
-                    ensureDirectoryExists(ocrImagesFolder);
-                    const browser = await remote({ capabilities: { browserName: 'stub' }, automationProtocol: './protocol-stub.js' })
-                    const options = {
-                        contrast: 0.25,
-                        isTesseractAvailable: true,
-                        language: 'eng',
-                        ocrImagesPath: ocrImagesFolder,
-                        haystack: {
-                            x: 0,
-                            y: croppedImage.bitmap.height * 0.5,
-                            width: croppedImage.bitmap.width,
-                            height: croppedImage.bitmap.height,
-                        },
-                        cliFile: readFileSync(`${croppedImagesFolder}/${fileName}`).toString('base64')
-                    }
-            
-                    try {
-                        const { words } = await getData(browser, options)
-                        const undoWord = words.find(word => /undo|unde/i.test(word.text));
-                        if (undoWord) {
-                            const { top, bottom } = undoWord.bbox;
-                            croppedImage.crop({
-                                x: 0,
-                                y: 0,
-                                w: croppedImage.bitmap.width,
-                                h: top - (bottom - top)
-                            })
-                            if (DEBUG) await croppedImage.write(`${croppedImagesFolder}/${fileName}`)
-                        } else {
-                            console.log(`❌ No '/undo|unde/i' word found for puzzle ${puzzleNumber}`);
-                            ensureDirectoryExists(undoDetectionFailedImagesFolder);
-                            if (DEBUG) await croppedImage.write(`${undoDetectionFailedImagesFolder}/${fileName}`);
-                        }
-                    } catch (ocrError) {
-                        console.error(`❌ OCR processing failed for ${fileName}:`, ocrError);
-                    }
-                }
 
-                // 3. Convert the cropped image to greyscale and save it
+                // 2. Convert the cropped image to greyscale and save it
                 ensureDirectoryExists(greyImagesFolder);
                 greyImage = croppedImage
                     .clone()
@@ -153,7 +101,7 @@ async function processImages(): Promise<void> {
             
                 if (DEBUG_SAVE_IMAGES) await greyImage.write(`${greyImagesFolder}/${fileName}`);
             
-                // Detect grid using main detection function
+                // 3. Detect the grid and calculate the crop boundaries
                 const gridDetection: GridDetectionResult = detectGrid(greyImage);
                 const { horizontalGrid, verticalGrid, success } = gridDetection;
             
@@ -168,8 +116,6 @@ async function processImages(): Promise<void> {
                         imageWidth, 
                         imageHeight
                     );
-                    
-                    // Draw visualization with crop boundaries
                     const visualCropBoundaries = {
                         x: cropBoundaries.x,
                         y: cropBoundaries.y,
@@ -178,17 +124,15 @@ async function processImages(): Promise<void> {
                     };
                     await drawCropBoundariesAndSave(greyImage, horizontalGrid, verticalGrid, puzzleNumber, gridDetectedImagesFolder, visualCropBoundaries);
                     
-                    // Process and save grid images
                     const folders: GridProcessingFolders = { gridCroppedImagesFolder };
                     gridCroppedImage = await processAndSaveGridImages(croppedImage, cropBoundaries, fileName, folders);
                 } else {
-                    // Save failed detection to grid-failed folder
                     ensureDirectoryExists(gridFailedImagesFolder);
                     if (DEBUG_SAVE_IMAGES) await greyImage.write(`${gridFailedImagesFolder}/${fileName}`);
                     console.log(`❌ Saved failed detection: ${gridFailedImagesFolder}/${fileName}`);
                 }
 
-                // 6. Determine the x and = symbols on the grid cropped image for determining the constraints
+                // 4. Determine the x and = symbols on the grid cropped image for determining the constraints
                 if (gridCroppedImage && horizontalGrid && verticalGrid) {
                     ensureDirectoryExists(constraintsImagesFolder);
                     constraintsImage = gridCroppedImage
@@ -217,7 +161,7 @@ async function processImages(): Promise<void> {
                     if (DEBUG) console.log(`❌ No grid cropped image or grid data found for: ${fileName}`);
                 }
 
-                // 7. Prefill the puzzle
+                // 5. Prefill the puzzle
                 if(parsedPuzzle.constraints.length > 0) {
                     ensureDirectoryExists(prefilledImagesFolder);
                     const {prefilledData, prefilledImage} = await getPrefilledData(gridCroppedImage, prefilledImagesFolder, fileName);
@@ -231,14 +175,14 @@ async function processImages(): Promise<void> {
                     if (DEBUG) console.log(`❌ No grid cropped image and constraints found for: ${fileName}`);
                 }
 
-                // 8. We now need to check if we can build the Tango puzzle based on the constraints and prefilled data
+                // 6. We now need to check if we can build the Tango puzzle based on the constraints and prefilled data
                 // If we can, we can save the puzzle to the parsed-images.json file
                 if(Object.keys(parsedPuzzle.prefilled).length > 0) {
                     const validationResult = buildAndValidateTangoPuzzle(parsedPuzzle);
                     validationResults.push({ fileName, result: validationResult });
                     
                     if (validationResult.success && validationResult.puzzle) {
-                        parsedPuzzles.push(validationResult.puzzle);
+                        newPuzzles.push(validationResult.puzzle);
                     }
                 } else {
                     if (DEBUG) console.log(`❌ No prefilled data found for: ${fileName}`);
@@ -259,26 +203,20 @@ async function processImages(): Promise<void> {
         }
     }
 
-    if (parsedPuzzles.length > 0) {
-        parsedPuzzles.sort((a, b) => a.id - b.id);
-        
-        const jsonOutput = JSON.stringify(parsedPuzzles, null, 0);
-        const outputPath = './app-data/puzzles.json';
-        
-        writeFileSync(outputPath, jsonOutput, 'utf8');
-        console.log(`\n📄 Generated puzzles.json with ${parsedPuzzles.length} puzzles: ${outputPath}`);
-        
-        // Update version number to indicate new puzzle data
-        updateVersionFile();
-    }
+    const { allPuzzles } = mergeAndSortPuzzles(existingPuzzles, newPuzzles);
+    savePuzzlesJson(allPuzzles, newPuzzles.length, existingPuzzles.length, updateVersionFile);
 
-    // Print validation summary
     printValidationSummary(validationResults);
 
     const endTime = Date.now();
-
-    console.log(`\n🏁 Process completed in ${((endTime - startTime) / 1000).toFixed(2)} seconds`);
-    console.log(`✅ Processed ${processedImages} images`);
+    
+    logProcessingSummary(
+        processedImages, 
+        newPuzzles.length, 
+        existingPuzzles.length, 
+        allPuzzles.length, 
+        endTime - startTime
+    );
 }
 
 if (require.main === module) {
