@@ -21,6 +21,7 @@ const gridFailedImagesFolder = `${processedImagesFolder}/3b. grid-failed`;
 const gridCroppedImagesFolder = `${processedImagesFolder}3c. grid-cropped`;
 const constraintsImagesFolder = `${processedImagesFolder}/4. constraints`;
 const prefilledImagesFolder = `${processedImagesFolder}/5. prefilled`;
+// Option 1: Process specific files (hardcoded list)
 const files = [
     './tango-data/thumbnails/tango-001.png',
     './tango-data/thumbnails/tango-002.png',
@@ -32,8 +33,11 @@ const files = [
     './tango-data/thumbnails/tango-008.png',
     './tango-data/thumbnails/tango-010.png',
 ];
-
+// Option 2: Process all files in thumbnails folder
 // const files = readdirSync('tango-data/thumbnails/').map(file => `tango-data/thumbnails/${file}`);
+
+// Option 3: Process a range of puzzle numbers (e.g., puzzles 20-30)
+// const files = generatePuzzleFileRange(20, 30); // Processes tango-020.png through tango-030.png
 
 async function processImages(): Promise<void> {
     const startTime = Date.now();
