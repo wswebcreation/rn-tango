@@ -1,3 +1,4 @@
+import { readdirSync } from 'fs';
 import { Jimp } from 'jimp';
 import { detectGrid, type GridDetectionResult } from './grid-detection/index';
 import { Puzzle } from './types/shared-types';
@@ -22,12 +23,12 @@ const gridCroppedImagesFolder = `${processedImagesFolder}/3c. grid-cropped`;
 const constraintsImagesFolder = `${processedImagesFolder}/4. constraints`;
 const prefilledImagesFolder = `${processedImagesFolder}/5. prefilled`;
 // Option 1: Process specific files (hardcoded list)
-const files = [
-    './tango-data/thumbnails/tango-260.png', // failed
-    './tango-data/thumbnails/tango-288.png', // failed
-];
+// const files = [
+//     './tango-data/thumbnails/tango-260.png', // failed
+//     './tango-data/thumbnails/tango-288.png', // failed
+// ];
 // Option 2: Process all files in thumbnails folder
-// const files = readdirSync('tango-data/thumbnails/').map(file => `tango-data/thumbnails/${file}`);
+const files = readdirSync('tango-data/thumbnails/').map(file => `tango-data/thumbnails/${file}`);
 // Option 3: Process a range of puzzle numbers (e.g., puzzles 20-30)
 // const files = generatePuzzleFileRange(226, 302);
 
@@ -40,8 +41,10 @@ async function processImages(): Promise<void> {
     const { puzzles: existingPuzzles, existingIds } = loadExistingPuzzles();
     const puzzleNumbersToSkip = [
         1,
-        // 260, // person and shoes as icons
-        // 288, // Person and shark
+        // 20, // Sees the mouse as a x, which is good, but not expected in the image
+        // 24, // Sees the mouse as a x, which is good, but not expected in the image
+        // 
+
     ];
     const { filesToProcess } = filterFilesToProcess(files, existingIds, puzzleNumbersToSkip);
     
