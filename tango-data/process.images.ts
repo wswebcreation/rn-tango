@@ -40,7 +40,7 @@ async function processImages(): Promise<void> {
     const startTime = Date.now();
     const { puzzles: existingPuzzles, existingIds } = loadExistingPuzzles();
     const puzzleNumbersToSkip = [
-        1,
+        0,
         // 20, // Sees the mouse as a x, which is good, but not expected in the image
         // 24, // Sees the mouse as a x, which is good, but not expected in the image
         // 
