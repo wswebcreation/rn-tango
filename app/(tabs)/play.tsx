@@ -39,7 +39,7 @@ const PuzzleBoard = () => {
   const {
     handleCellPress,
     getCellValue,
-    getCellConstraint,
+    getCellConstraints,
     undoLastMove,
     resetBoard,
     canUndo,
@@ -71,7 +71,7 @@ const PuzzleBoard = () => {
       const isPrefilled = key in puzzle.prefilled;
       const color = isPrefilled ? Colors.preFilled : Colors.blueBg;
       
-      const constraintHint = getCellConstraint(rowIndex, colIndex);
+      const constraintHints = getCellConstraints(rowIndex, colIndex);
 
       return {
         color,
@@ -83,7 +83,7 @@ const PuzzleBoard = () => {
           backgroundColor: color
         },
         value: getCellValue(rowIndex, colIndex),
-        constraint: constraintHint,
+        constraints: constraintHints,
         hasError: hasCellError(rowIndex, colIndex),
       };
     })

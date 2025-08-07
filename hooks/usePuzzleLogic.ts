@@ -1,5 +1,5 @@
 import { useTangoStore } from '@/store/useTangoStore';
-import { CellCoordinate, CellValue, Constraint, Direction, Puzzle } from '@/types/tango';
+import { CellConstraint, CellCoordinate, CellValue, Constraint, Direction, Puzzle } from '@/types/tango';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 export function usePuzzleLogic(puzzle: Puzzle | undefined, puzzleId: number) {
@@ -224,24 +224,46 @@ export function usePuzzleLogic(puzzle: Puzzle | undefined, puzzleId: number) {
     return puzzle.prefilled[coordinate] || boardState.cells[coordinate];
   };
 
-  const getCellConstraint = (row: number, col: number) => {
-    if (!puzzle) return null;
+  const getCellConstraints = (row: number, col: number): CellConstraint[] => {
+    if (!puzzle) return [];
     
     const coordinate: CellCoordinate = `${row},${col}`;
-    const constraint = puzzle.constraints.find((constraint: Constraint) => {
-      return constraint[0] === coordinate;
+    const constraints = puzzle.constraints.filter((constraint: Constraint) => {
+      return constraint[0] === coordinate || constraint[1] === coordinate;
     });
 
-    if (!constraint) return null;
+    if (constraints.length === 0) return [];
     
-    const [cell1Row] = constraint[0].split(',').map(Number);
-    const [cell2Row] = constraint[1].split(',').map(Number);
-    const direction: Direction = cell1Row === cell2Row ? 'right' : 'down';
+    // For each constraint, determine if THIS cell should display it
+    const constraintsToShow = constraints.filter(constraint => {
+      const [cell1Row, cell1Col] = constraint[0].split(',').map(Number);
+      const [cell2Row, cell2Col] = constraint[1].split(',').map(Number);
+      
+      let displayCell: CellCoordinate;
+      
+      if (cell1Row === cell2Row) {
+        // Horizontal constraint - display on the leftmost cell
+        displayCell = cell1Col < cell2Col ? constraint[0] : constraint[1];
+      } else {
+        // Vertical constraint - display on the topmost cell
+        displayCell = cell1Row < cell2Row ? constraint[0] : constraint[1];
+      }
+      
+      // Only show constraint if this cell is the designated display cell
+      return coordinate === displayCell;
+    });
     
-    return {
-      direction,
-      value: constraint[2]
-    };
+    // Convert to CellConstraint format
+    return constraintsToShow.map(constraint => {
+      const [cell1Row, cell1Col] = constraint[0].split(',').map(Number);
+      const [cell2Row, cell2Col] = constraint[1].split(',').map(Number);
+      const direction: Direction = cell1Row === cell2Row ? 'right' : 'down';
+      
+      return {
+        direction,
+        value: constraint[2]
+      };
+    });
   };
 
   const immediateErrors = useMemo(() => {
@@ -393,7 +415,7 @@ export function usePuzzleLogic(puzzle: Puzzle | undefined, puzzleId: number) {
     boardState,
     handleCellPress,
     getCellValue,
-    getCellConstraint,
+    getCellConstraints,
     undoLastMove: () => undoLastMove(puzzleId),
     resetBoard: () => resetBoard(puzzleId),
     validateBoard,

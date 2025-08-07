@@ -16,7 +16,7 @@ export type CellData = {
   color: string;
   style: any;
   value: CellValue | undefined;
-  constraint: CellConstraint;
+  constraints: CellConstraint[];
   hasError?: boolean;
 };
 
@@ -45,7 +45,7 @@ export type PuzzleGridProps = {
 };
 
 export type ConstraintItem = {
-  constraint: CellConstraint;
+  constraints: CellConstraint[];
   row: number;
   col: number;
   cellWidth: number;
@@ -53,7 +53,7 @@ export type ConstraintItem = {
 };
 
 export type ConstraintTextProps = {
-  constraint: CellConstraint;
+  constraints: CellConstraint[]; 
   row: number;
   col: number;
   cellWidth: number;

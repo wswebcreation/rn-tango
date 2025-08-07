@@ -15,9 +15,9 @@ export const PuzzleGrid = ({ board, onCellPress }: PuzzleGridProps) => {
   const constraints: ConstraintItem[] = [];
   board.forEach((row, rowIndex) => {
     row.forEach((cell, colIndex) => {
-      if (cell.constraint) {
+      if (cell.constraints && cell.constraints.length > 0) {
         constraints.push({
-          constraint: cell.constraint,
+          constraints: cell.constraints,
           row: rowIndex,
           col: colIndex,
           cellWidth,
@@ -48,7 +48,7 @@ export const PuzzleGrid = ({ board, onCellPress }: PuzzleGridProps) => {
       {constraints.map((item, index) => (
         <ConstraintText
           key={`constraint-${index}`}
-          constraint={item.constraint}
+          constraints={item.constraints}
           row={item.row}
           col={item.col}
           cellWidth={item.cellWidth}
