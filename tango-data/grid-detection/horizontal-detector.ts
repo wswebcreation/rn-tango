@@ -12,7 +12,7 @@ export function detectTopHorizontalLine(image: any): GridLine | null {
     // Grid line color range
     const MIN_GRID_COLOR = 230;
     const MAX_GRID_COLOR = 254;
-    const MIN_LINE_WIDTH = Math.floor(width * 0.5); // 50% of image width
+    const MIN_LINE_WIDTH = Math.floor(width * 0.65); // 50% of image width
     const MAX_LINE_THICKNESS = 5;
     const SEARCH_AREA_HEIGHT = Math.floor(height * 0.25); // Search top 25%
     

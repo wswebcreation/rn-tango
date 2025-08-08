@@ -10,8 +10,8 @@ import { calculateCropBoundaries, processAndSaveGridImages, type CropBoundaries,
 import { filterFilesToProcess, loadExistingPuzzles, logProcessingSummary, mergeAndSortPuzzles, savePuzzlesJson } from './utils/incremental-processing';
 import { getPrefilledDataWithManual } from './utils/prefill-detection';
 import { printValidationSummary } from './utils/validation-summary';
-import { updateVersionFile } from './utils/version-manager';
 import { drawCropBoundariesAndSave, drawDetectedSymbolsOnAreasImage } from './utils/visualization';
+import { updateVersionFile } from './utils/version-manager';
 
 // Configuration
 const processedImagesFolder = './tango-data/processed-images';
@@ -24,8 +24,7 @@ const constraintsImagesFolder = `${processedImagesFolder}/4. constraints`;
 const prefilledImagesFolder = `${processedImagesFolder}/5. prefilled`;
 // Option 1: Process specific files (hardcoded list)
 // const files = [
-//     './tango-data/thumbnails/tango-260.png', // failed
-//     './tango-data/thumbnails/tango-288.png', // failed
+//     './tango-data/thumbnails/tango-091.png', // incorrect grid detection
 // ];
 // Option 2: Process all files in thumbnails folder
 const files = readdirSync('tango-data/thumbnails/').map(file => `tango-data/thumbnails/${file}`);
