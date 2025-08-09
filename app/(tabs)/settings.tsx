@@ -1,14 +1,22 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React from 'react';
-import { Alert, ScrollView, StyleSheet, Text } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
 import { Colors } from '@/constants/Colors';
 import { fetchRemoteVersion, loadLocalVersion, resetToFallbackPuzzles } from '@/lib/puzzleManager';
 import { useTangoStore } from '@/store/useTangoStore';
+import { ThemePreference } from '@/types/tango';
 
 const SettingsScreen = () => {
+  const { themePreference, setThemePreference } = useTangoStore();
+
+  const themeOptions: { label: string; value: ThemePreference }[] = [
+    { label: 'From OS', value: 'auto' },
+    { label: 'Light', value: 'light' },
+    { label: 'Dark', value: 'dark' },
+  ];
   const handleReset = async () => {
     Alert.alert(
       'Reset App State',
@@ -86,16 +94,41 @@ const SettingsScreen = () => {
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Settings</Text>
       <ScrollView contentContainerStyle={styles.list}>
-        <Button 
-          label="Reset App State"
-          onPress={handleReset}
-          containerStyle={styles.button}
-        />
-        <Button 
-          label="Reset to Default Puzzles"
-          onPress={handleResetToFallback}
-          containerStyle={styles.button}
-        />
+        
+        {/* Theme Selection */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Theme</Text>
+          {themeOptions.map((option) => (
+            <Button
+              key={option.value}
+              label={option.label}
+              onPress={() => setThemePreference(option.value)}
+              containerStyle={[
+                styles.themeButton,
+                themePreference === option.value && styles.activeThemeButton
+              ]}
+              textStyle={[
+                styles.themeButtonText,
+                themePreference === option.value && styles.activeThemeButtonText
+              ]}
+            />
+          ))}
+        </View>
+
+        {/* App Management */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>App Management</Text>
+          <Button 
+            label="Reset App State"
+            onPress={handleReset}
+            containerStyle={styles.button}
+          />
+          <Button 
+            label="Reset to Default Puzzles"
+            onPress={handleResetToFallback}
+            containerStyle={styles.button}
+          />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -119,6 +152,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-start',
   },
+  section: {
+    width: '100%',
+    marginBottom: 32,
+  },
+  sectionTitle: {
+    color: Colors.text,
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
   button: {
     padding: 16,
     borderRadius: 8,
@@ -126,6 +170,28 @@ const styles = StyleSheet.create({
     width: '100%',
     alignItems: 'center',
     borderWidth: 0,
+  },
+  themeButton: {
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 8,
+    width: '100%',
+    backgroundColor: Colors.inactive,
+    borderColor: Colors.inactive,
+    borderWidth: 1,
+  },
+  activeThemeButton: {
+    backgroundColor: Colors.active,
+    borderColor: Colors.active,
+  },
+  themeButtonText: {
+    color: Colors.inactiveText,
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  activeThemeButtonText: {
+    color: Colors.activeText,
+    fontWeight: 'bold',
   },
 });
 

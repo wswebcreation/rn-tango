@@ -84,10 +84,13 @@ export type PuzzleState = {
   boardState: BoardState;
 };
 
+export type ThemePreference = 'auto' | 'light' | 'dark';
+
 export type TangoStore = {
   currentPuzzleId: number;
   puzzlesState: Record<number, PuzzleState>;
   solvedPuzzles: number[];
+  themePreference: ThemePreference;
   
   // Timer Actions
   setCurrentPuzzle: (puzzleId: number) => void;
@@ -104,4 +107,7 @@ export type TangoStore = {
   resetBoard: (puzzleId: number) => void;
   goToNextPuzzle: () => void;
   goToPreviousPuzzle: () => void;
+  
+  // Theme Actions
+  setThemePreference: (preference: ThemePreference) => void;
 };
