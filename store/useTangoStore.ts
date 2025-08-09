@@ -1,4 +1,4 @@
-import { BoardState, CellCoordinate, CellValue, Move, PuzzleState, TangoStore } from '@/types/tango';
+import { BoardState, CellCoordinate, CellValue, Move, PuzzleState, TangoStore, ThemePreference } from '@/types/tango';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
@@ -23,6 +23,7 @@ export const useTangoStore = create<TangoStore>()(
       currentPuzzleId: 1,
       puzzlesState: {},
       solvedPuzzles: [],
+      themePreference: 'auto' as ThemePreference,
 
       setCurrentPuzzle: (puzzleId: number) => {
         const { puzzlesState } = get();
@@ -295,6 +296,10 @@ export const useTangoStore = create<TangoStore>()(
         if (currentPuzzleId > 1) {
           set({ currentPuzzleId: currentPuzzleId - 1 });
         }
+      },
+
+      setThemePreference: (preference: ThemePreference) => {
+        set({ themePreference: preference });
       },
     }),
     {

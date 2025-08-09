@@ -1,9 +1,9 @@
 import { Button } from '@/components/ui/Button';
 import { PuzzleGrid } from '@/components/ui/PuzzleGrid';
-import { Colors } from '@/constants/Colors';
 import { usePuzzle } from '@/hooks/usePuzzle';
 import { usePuzzleLogic } from '@/hooks/usePuzzleLogic';
 import { usePuzzleTimer } from '@/hooks/usePuzzleTimer';
+import { useTheme } from '@/hooks/useTheme';
 import { addOnPuzzlesUpdatedCallback, removeOnPuzzlesUpdatedCallback } from '@/lib/puzzleManager';
 import { useTangoStore } from '@/store/useTangoStore';
 import { CellData } from '@/types/tango';
@@ -19,6 +19,7 @@ const PuzzleBoard = () => {
     goToPreviousPuzzle,
   } = useTangoStore();
   
+  const { colors } = useTheme();
   const { puzzle, loading, refreshPuzzle } = usePuzzle(currentPuzzleId);
   
   useEffect(() => {
@@ -53,6 +54,68 @@ const PuzzleBoard = () => {
     return `${h}:${m}:${s}`;
   };
 
+  const styles = StyleSheet.create({
+    buttonContainer: {
+      flexDirection: 'row',
+      gap: 12,
+      marginTop: 24
+    },
+    container: {
+      alignItems: 'center',
+      backgroundColor: colors.blueBg,
+      flex: 1,
+      justifyContent: 'center'
+    },
+    nextButton: {
+      marginTop: 24,
+      width: '83%',
+    },
+    solvedButton: {
+      backgroundColor: colors.active,
+      borderColor: colors.active,
+    },
+    solvedButtonText: {
+      color: colors.activeText
+    },
+    overlay: {
+      position: 'absolute',
+      top: 0,
+      bottom: 0,
+      left: 0,
+      right: 0,
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 1000
+    },
+    header: {
+      fontSize: 36,
+      color: colors.text,
+    },
+    row: {
+      flexDirection: 'row'
+    },
+    solved: {
+      backgroundColor: 'rgba(255,255,255,0.8)',
+      borderRadius: 8,
+      color: colors.black,
+      fontSize: 24,
+      fontWeight: 'bold',
+      padding: 12
+    },
+    timer: {
+      color: colors.text,
+      fontSize: 14,
+      fontWeight: '600',
+      marginBottom: 16
+    },
+    title: {
+      color: colors.text,
+      fontSize: 20,
+      fontWeight: '600',
+      marginBottom: 16
+    },
+  });
+
   const solvedButtonClass = isSolved ? styles.solvedButton : {};
   const solvedButtonTextClass = isSolved ? styles.solvedButtonText : {};
   
@@ -69,7 +132,7 @@ const PuzzleBoard = () => {
     Array.from({ length: size }, (_, colIndex) => {
       const key = `${rowIndex},${colIndex}`;
       const isPrefilled = key in puzzle.prefilled;
-      const color = isPrefilled ? Colors.preFilled : Colors.blueBg;
+      const color = isPrefilled ? colors.preFilled : colors.blueBg;
       
       const constraintHints = getCellConstraints(rowIndex, colIndex);
 
@@ -79,7 +142,7 @@ const PuzzleBoard = () => {
           width: cellSize,
           height: cellSize,
           borderWidth: 2,
-          borderColor: Colors.line,
+          borderColor: colors.line,
           backgroundColor: color
         },
         value: getCellValue(rowIndex, colIndex),
@@ -127,67 +190,5 @@ const PuzzleBoard = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  buttonContainer: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 24
-  },
-  container: {
-    alignItems: 'center',
-    backgroundColor: Colors.blueBg,
-    flex: 1,
-    justifyContent: 'center'
-  },
-  nextButton: {
-    marginTop: 24,
-    width: '83%',
-  },
-  solvedButton: {
-    backgroundColor: Colors.active,
-    borderColor: Colors.active,
-  },
-  solvedButtonText: {
-    color: Colors.activeText
-  },
-  overlay: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000
-  },
-  header: {
-    fontSize: 36,
-    color: Colors.text,
-  },
-  row: {
-    flexDirection: 'row'
-  },
-  solved: {
-    backgroundColor: 'rgba(255,255,255,0.8)',
-    borderRadius: 8,
-    color: Colors.black,
-    fontSize: 24,
-    fontWeight: 'bold',
-    padding: 12
-  },
-  timer: {
-    color: Colors.text,
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 16
-  },
-  title: {
-    color: Colors.text,
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 16
-  },
-});
 
 export default PuzzleBoard;

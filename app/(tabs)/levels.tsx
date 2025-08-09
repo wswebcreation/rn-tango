@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/Button';
-import { Colors } from '@/constants/Colors';
 import { usePuzzles } from '@/hooks/usePuzzles';
+import { useTheme } from '@/hooks/useTheme';
 import { addOnPuzzlesUpdatedCallback, removeOnPuzzlesUpdatedCallback } from '@/lib/puzzleManager';
 import { useTangoStore } from '@/store/useTangoStore';
 import { useRouter } from 'expo-router';
@@ -18,6 +18,7 @@ const formatTime = (seconds: number): string => {
 const LevelsScreen = () => {
   const { puzzles, loading, refreshPuzzles } = usePuzzles();
   const { setCurrentPuzzle, solvedPuzzles, puzzlesState, currentPuzzleId } = useTangoStore();
+  const { colors } = useTheme();
   const router = useRouter();
 
   useEffect(() => {
@@ -27,6 +28,44 @@ const LevelsScreen = () => {
       removeOnPuzzlesUpdatedCallback(refreshPuzzles);
     };
   }, [refreshPuzzles]);
+
+  const styles = StyleSheet.create({
+    container: {
+      backgroundColor: colors.blueBg,
+      flex: 1,
+    },
+    title: {
+      color: colors.text,
+      fontSize: 24,
+      fontWeight: 'bold',
+      textAlign: 'center',
+      marginVertical: 20,
+    },
+    list: {
+      padding: 20,
+    },
+    levelButton: {
+      marginBottom: 12,
+      width: '100%',
+      alignItems: 'flex-start',
+    },
+    currentLevel: {
+      backgroundColor: colors.active,
+      borderColor: colors.active,
+    },
+    lockedLevel: {
+      backgroundColor: colors.inactive,
+      borderColor: colors.inactive,
+    },
+    solved: {
+      backgroundColor: colors.active,
+      borderColor: colors.active,
+    },
+    levelText: {
+      color: colors.activeText,
+      textAlign: 'left',
+    },
+  });
 
   if (loading) {
     return (
@@ -78,43 +117,5 @@ const LevelsScreen = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: Colors.blueBg,
-    flex: 1,
-  },
-  title: {
-    color: Colors.text,
-    fontSize: 24,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginVertical: 20,
-  },
-  list: {
-    padding: 20,
-  },
-  levelButton: {
-    marginBottom: 12,
-    width: '100%',
-    alignItems: 'flex-start',
-  },
-  currentLevel: {
-    backgroundColor: Colors.active,
-    borderColor: Colors.active,
-  },
-  lockedLevel: {
-    backgroundColor: Colors.inactive,
-    borderColor: Colors.inactive,
-  },
-  solved: {
-    backgroundColor: Colors.active,
-    borderColor: Colors.active,
-  },
-  levelText: {
-    color: Colors.activeText,
-    textAlign: 'left',
-  },
-});
 
 export default LevelsScreen;
