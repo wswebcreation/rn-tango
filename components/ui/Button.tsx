@@ -1,4 +1,4 @@
-import { Colors } from '@/constants/Colors';
+import { useTheme } from '@/hooks/useTheme';
 import React from 'react';
 import { StyleProp, StyleSheet, Text, TextStyle, TouchableOpacity, ViewStyle } from 'react-native';
 
@@ -11,6 +11,32 @@ type ButtonProps = {
 };
 
 export const Button = ({ containerStyle, disabled, label, onPress, textStyle }: ButtonProps) => {
+  const { colors } = useTheme();
+  
+  const styles = StyleSheet.create({
+    button: {
+      alignItems: 'center',
+      backgroundColor: colors.active,
+      borderColor: colors.active,
+      borderWidth: 1,
+      borderRadius: 20,
+      padding: 16,
+      width: '40%'
+    },
+    text: {
+      color: colors.activeText,
+      fontSize: 16,
+      fontWeight: 'bold'
+    },
+    inActiveButton: {
+      backgroundColor: colors.inactive,
+      borderColor: colors.inactive,
+    },
+    inActiveText: {
+      color: colors.inactiveText,
+    }
+  });
+
   return (
     <TouchableOpacity
       onPress={onPress}
@@ -29,27 +55,3 @@ export const Button = ({ containerStyle, disabled, label, onPress, textStyle }: 
     </TouchableOpacity>
   );
 };
-
-const styles = StyleSheet.create({
-  button: {
-    alignItems: 'center',
-    backgroundColor: Colors.active,
-    borderColor: Colors.active,
-    borderWidth: 1,
-    borderRadius: 20,
-    padding: 16,
-    width: '40%'
-  },
-  text: {
-    color: Colors.activeText,
-    fontSize: 16,
-    fontWeight: 'bold'
-  },
-  inActiveButton: {
-    backgroundColor: Colors.inactive,
-    borderColor: Colors.inactive,
-  },
-  inActiveText: {
-    color: Colors.inactiveText,
-  }
-})

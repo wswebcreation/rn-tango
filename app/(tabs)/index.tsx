@@ -1,7 +1,7 @@
 import { BulletList } from '@/components/ui/BulletList';
 import { Button } from '@/components/ui/Button';
-import { Colors } from '@/constants/Colors';
 import { usePuzzlesMetadata } from '@/hooks/usePuzzlesMetadata';
+import { useTheme } from '@/hooks/useTheme';
 import { setOnPuzzlesResetCallback } from '@/lib/puzzleManager';
 import React, { useEffect } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -9,6 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
     const { loading, lastUpdated, checkForNewPuzzles, updateAvailable, refreshMetadata } = usePuzzlesMetadata();
+    const { colors } = useTheme();
     
     useEffect(() => {
       setOnPuzzlesResetCallback(refreshMetadata);
@@ -24,6 +25,65 @@ export default function HomeScreen() {
          ' ' + 
          date.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     };
+
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.blueBg,
+    },
+    content: {
+      padding: 20,
+      alignItems: 'center',
+      },
+    button: {
+        width: '80%',
+    },
+    title: {
+      fontSize: 28,
+      fontWeight: 'bold',
+      color: colors.white,
+      marginBottom: 16,
+    },
+    section: {
+      marginBottom: 24,
+      width: '100%',
+    },
+    sectionTitle: {
+      fontSize: 22,
+      fontWeight: 'bold',
+      color: colors.white,
+      marginBottom: 12,
+    },
+    sectionText: {
+      fontSize: 16,
+      color: colors.text,
+      marginBottom: 8,
+    },
+    buttonContainer: {
+      marginTop: 20,
+      width: '100%',
+      alignItems: 'center',
+    },
+    lastUpdated: {
+        marginTop: 12,
+        fontSize: 14,
+        color: colors.text,
+    },  
+    updateWarning: {
+      marginTop: 16,
+      backgroundColor: colors.preFilled,
+      borderColor: colors.preFilled,
+      borderWidth: 1,
+      padding: 12,
+      borderRadius: 8,
+    },
+    updateWarningText: {
+      color: colors.text,
+      fontSize: 14,
+      fontWeight: 'bold',
+      textAlign: 'center',
+    },
+  });
 
   return (
     <SafeAreaView style={styles.container}>
@@ -63,63 +123,3 @@ export default function HomeScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.blueBg,
-  },
-  content: {
-    padding: 20,
-    alignItems: 'center',
-    },
-  button: {
-      width: '80%',
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: Colors.white,
-    marginBottom: 16,
-  },
-  section: {
-    marginBottom: 24,
-    width: '100%',
-  },
-  sectionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: Colors.white,
-    marginBottom: 12,
-  },
-  sectionText: {
-    fontSize: 16,
-    color: Colors.text,
-    marginBottom: 8,
-  },
-  buttonContainer: {
-    marginTop: 20,
-    width: '100%',
-    alignItems: 'center',
-  },
-  lastUpdated: {
-      marginTop: 12,
-      fontSize: 14,
-      color: Colors.text,
-  },  
-  updateWarning: {
-    marginTop: 16,
-    backgroundColor: Colors.preFilled,
-    borderColor: Colors.preFilled,
-    borderWidth: 1,
-    padding: 12,
-    borderRadius: 8,
-  },
-  updateWarningText: {
-    color: Colors.text,
-    fontSize: 14,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  
-});

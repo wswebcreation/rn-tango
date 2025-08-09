@@ -1,4 +1,4 @@
-import { Colors } from '@/constants/Colors';
+import { useTheme } from '@/hooks/useTheme';
 import { ConstraintTextProps } from '@/types/tango';
 import React from 'react';
 import { StyleSheet, Text } from 'react-native';
@@ -12,7 +12,20 @@ export const ConstraintText = ({
   constraintFontSize,
   constraintHeightWidth,
 }: ConstraintTextProps) => {
+  const { colors } = useTheme();
+  
   if (!constraints || constraints.length === 0) return null;
+
+  const styles = StyleSheet.create({
+    constraint: {
+      position: 'absolute',
+      color: colors.text,
+      backgroundColor: colors.blueBg,
+      zIndex: 999,
+      elevation: 10,
+      textAlign: 'center',
+    },
+  });
 
   return (
     <>
@@ -54,14 +67,3 @@ export const ConstraintText = ({
     </>
   );
 };
-
-const styles = StyleSheet.create({
-  constraint: {
-    position: 'absolute',
-    color: Colors.text,
-    backgroundColor: Colors.blueBg,
-    zIndex: 999,
-    elevation: 10,
-    textAlign: 'center',
-  },
-}); 

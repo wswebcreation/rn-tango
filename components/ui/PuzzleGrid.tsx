@@ -1,4 +1,4 @@
-import { Colors } from '@/constants/Colors';
+import { useTheme } from '@/hooks/useTheme';
 import { ConstraintItem, PuzzleGridProps } from '@/types/tango';
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -6,6 +6,7 @@ import { ConstraintText } from './ConstraintText';
 import { PuzzleCell } from './PuzzleCell';
 
 export const PuzzleGrid = ({ board, onCellPress }: PuzzleGridProps) => {
+  const { colors } = useTheme();
   const cellWidth = typeof board[0]?.[0]?.style?.width === 'number' ? board[0][0].style.width : 50;
   const cellHeight = typeof board[0]?.[0]?.style?.height === 'number' ? board[0][0].style.height : 50;
   const cellSize = Math.min(cellWidth, cellHeight);
@@ -25,6 +26,18 @@ export const PuzzleGrid = ({ board, onCellPress }: PuzzleGridProps) => {
         });
       }
     });
+  });
+
+  const styles = StyleSheet.create({
+    gridContainer: {
+      borderWidth: 2,
+      borderColor: colors.line,
+      overflow: 'visible',
+    },
+    row: {
+      flexDirection: 'row',
+      overflow: 'visible',
+    },
   });
 
   return (
@@ -60,15 +73,3 @@ export const PuzzleGrid = ({ board, onCellPress }: PuzzleGridProps) => {
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  gridContainer: {
-    borderWidth: 2,
-    borderColor: Colors.line,
-    overflow: 'visible',
-  },
-  row: {
-    flexDirection: 'row',
-    overflow: 'visible',
-  },
-});

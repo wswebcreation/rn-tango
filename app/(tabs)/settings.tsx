@@ -4,13 +4,14 @@ import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
-import { Colors } from '@/constants/Colors';
+import { useTheme } from '@/hooks/useTheme';
 import { fetchRemoteVersion, loadLocalVersion, resetToFallbackPuzzles } from '@/lib/puzzleManager';
 import { useTangoStore } from '@/store/useTangoStore';
 import { ThemePreference } from '@/types/tango';
 
 const SettingsScreen = () => {
   const { themePreference, setThemePreference } = useTangoStore();
+  const { colors } = useTheme();
 
   const themeOptions: { label: string; value: ThemePreference }[] = [
     { label: 'From OS', value: 'auto' },
@@ -90,6 +91,67 @@ const SettingsScreen = () => {
     );
   };
 
+  const styles = StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: colors.blueBg,
+      padding: 20,
+    },
+    title: {
+      color: colors.text,
+      fontSize: 22,
+      fontWeight: 'bold',
+      marginBottom: 16,
+      textAlign: 'center',
+    },
+    list: {
+      flexGrow: 1,
+      alignItems: 'center',
+      justifyContent: 'flex-start',
+    },
+    section: {
+      width: '100%',
+      marginBottom: 32,
+    },
+    sectionTitle: {
+      color: colors.text,
+      fontSize: 18,
+      fontWeight: 'bold',
+      marginBottom: 12,
+      textAlign: 'center',
+    },
+    button: {
+      padding: 16,
+      borderRadius: 8,
+      marginBottom: 12,
+      width: '100%',
+      alignItems: 'center',
+      borderWidth: 0,
+    },
+    themeButton: {
+      padding: 12,
+      borderRadius: 8,
+      marginBottom: 8,
+      width: '100%',
+      backgroundColor: colors.inactive,
+      borderColor: colors.inactive,
+      borderWidth: 1,
+    },
+    activeThemeButton: {
+      backgroundColor: colors.active,
+      borderColor: colors.active,
+    },
+    themeButtonText: {
+      color: colors.inactiveText,
+      fontSize: 16,
+      fontWeight: '500',
+    },
+    activeThemeButtonText: {
+      color: colors.activeText,
+      fontWeight: 'bold',
+    },
+  });
+
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>Settings</Text>
@@ -133,66 +195,5 @@ const SettingsScreen = () => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.blueBg,
-    padding: 20,
-  },
-  title: {
-    color: Colors.text,
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  list: {
-    flexGrow: 1,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-  },
-  section: {
-    width: '100%',
-    marginBottom: 32,
-  },
-  sectionTitle: {
-    color: Colors.text,
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  button: {
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
-    width: '100%',
-    alignItems: 'center',
-    borderWidth: 0,
-  },
-  themeButton: {
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-    width: '100%',
-    backgroundColor: Colors.inactive,
-    borderColor: Colors.inactive,
-    borderWidth: 1,
-  },
-  activeThemeButton: {
-    backgroundColor: Colors.active,
-    borderColor: Colors.active,
-  },
-  themeButtonText: {
-    color: Colors.inactiveText,
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  activeThemeButtonText: {
-    color: Colors.activeText,
-    fontWeight: 'bold',
-  },
-});
 
 export default SettingsScreen;
