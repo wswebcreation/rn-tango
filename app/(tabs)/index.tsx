@@ -101,13 +101,12 @@ const styles = StyleSheet.create({
     marginTop: 20,
     width: '100%',
     alignItems: 'center',
-    },
-    lastUpdated: {
-        marginTop: 12,
-        fontSize: 14,
-        color: Colors.text,
   },
-    
+  lastUpdated: {
+      marginTop: 12,
+      fontSize: 14,
+      color: Colors.text,
+  },  
   updateWarning: {
     marginTop: 16,
     backgroundColor: Colors.preFilled,
@@ -117,7 +116,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   updateWarningText: {
-    color: Colors.black,
+    color: Colors.text,
     fontSize: 14,
     fontWeight: 'bold',
     textAlign: 'center',
