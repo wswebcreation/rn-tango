@@ -27,13 +27,21 @@ export const GRID_CORNER_PADDING = 5;
 
 // Some puzzles are hard to detect the constraints due to different icons, so we can manually add it here
 export const MANUALLY_CONSTRAINTS_PUZZLES: ManualConstraintsData = {
+    245: [
+        ["1,3", "1,4", "x"],
+        ["5,3", "5,4", "x"],
+        ["1,4", "1,5", "x"], 
+        ["5,4", "5,5", "x"], 
+        ["2,4", "3,4", "x"], 
+        ["3,3", "4,3", "x"],
+        ["3,4", "4,4", "="]
+    ],
     260: [
         ["1,1", "2,1", "x"],
         ["2,1", "3,1", "x"],
         ["3,1", "3,2", "x"],
         ["3,2", "3,3", "="],
         ["3,3", "4,3", "="],
-        ["3,1", "4,1", "x"],
     ],
     288: [
         ["1,3", "1,4", "x"],
