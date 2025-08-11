@@ -33,7 +33,6 @@ export const MANUALLY_CONSTRAINTS_PUZZLES: ManualConstraintsData = {
         ["1,4", "1,5", "x"], 
         ["5,4", "5,5", "x"], 
         ["2,4", "3,4", "x"], 
-        ["3,3", "4,3", "x"],
         ["3,4", "4,4", "="]
     ],
     260: [
