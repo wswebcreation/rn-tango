@@ -52,7 +52,13 @@ export const MANUALLY_CONSTRAINTS_PUZZLES: ManualConstraintsData = {
         ["3,2", "4,2", "="],
         ["4,0", "4,1", "x"],
         ["4,1", "4,2", "="],
-    ]
+    ],
+    295: [
+        ["0,1", "1,1", "x"],
+        ["1,4", "1,5", "="],
+        ["4,0", "4,1", "x"],
+        ["4,4", "5,4", "x"]
+    ],
 }
 
 // Some puzzles are hard to detect the prefilled data due to different icons, so we can manually add it here
