@@ -38,6 +38,7 @@ export const MANUALLY_CONSTRAINTS_PUZZLES: ManualConstraintsData = {
     260: [
         ["1,1", "2,1", "x"],
         ["2,1", "3,1", "x"],
+        ["3,1", "4,1", "x"],
         ["3,1", "3,2", "x"],
         ["3,2", "3,3", "="],
         ["3,3", "4,3", "="],
@@ -126,7 +127,7 @@ export const MANUALLY_PREFILLED_PUZZLES: ManualPrefilledData = {
     },
     260: {
         "1,2": "🌑",
-        "1,4": "🌑",
+        "1,4": "☀️",
         "2,2": "☀️",
         "2,3": "🌑",
         "2,4": "☀️",
