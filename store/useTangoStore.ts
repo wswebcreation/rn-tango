@@ -23,6 +23,7 @@ export const useTangoStore = create<TangoStore>()(
       currentPuzzleId: 1,
       puzzlesState: {},
       solvedPuzzles: [],
+      bestScores: {},
       themePreference: 'auto' as ThemePreference,
 
       setCurrentPuzzle: (puzzleId: number) => {
@@ -120,7 +121,7 @@ export const useTangoStore = create<TangoStore>()(
       },
 
       markPuzzleSolved: (puzzleId: number) => {
-        const { puzzlesState, solvedPuzzles } = get();
+        const { puzzlesState, solvedPuzzles, bestScores } = get();
         const currentState = puzzlesState[puzzleId];
         
         if (currentState && !currentState.isSolved) {
@@ -129,6 +130,10 @@ export const useTangoStore = create<TangoStore>()(
             const elapsed = Date.now() - currentState.startTime;
             finalTime += Math.floor(elapsed / 1000);
           }
+
+          // Check if this is a new best score
+          const currentBest = bestScores[puzzleId];
+          const isNewBest = !currentBest || finalTime < currentBest;
 
           set({
             puzzlesState: {
@@ -146,6 +151,7 @@ export const useTangoStore = create<TangoStore>()(
               },
             },
             solvedPuzzles: [...solvedPuzzles, puzzleId],
+            bestScores: isNewBest ? { ...bestScores, [puzzleId]: finalTime } : bestScores,
           });
         }
       },

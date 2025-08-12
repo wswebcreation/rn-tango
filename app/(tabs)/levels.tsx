@@ -5,7 +5,7 @@ import { addOnPuzzlesUpdatedCallback, removeOnPuzzlesUpdatedCallback } from '@/l
 import { useTangoStore } from '@/store/useTangoStore';
 import { useRouter } from 'expo-router';
 import React, { useEffect } from 'react';
-import { FlatList, StyleSheet, Text } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 const formatTime = (seconds: number): string => {
@@ -17,7 +17,7 @@ const formatTime = (seconds: number): string => {
 
 const LevelsScreen = () => {
   const { puzzles, loading, refreshPuzzles } = usePuzzles();
-  const { setCurrentPuzzle, solvedPuzzles, puzzlesState, currentPuzzleId } = useTangoStore();
+  const { currentPuzzleId, setCurrentPuzzle, solvedPuzzles, puzzlesState, bestScores } = useTangoStore();
   const { colors } = useTheme();
   const router = useRouter();
 
@@ -45,7 +45,6 @@ const LevelsScreen = () => {
       padding: 20,
     },
     levelButton: {
-      marginBottom: 12,
       width: '100%',
       alignItems: 'flex-start',
     },
@@ -64,6 +63,18 @@ const LevelsScreen = () => {
     levelText: {
       color: colors.activeText,
       textAlign: 'left',
+    },
+    levelButtonContainer: {
+      position: 'relative',
+      marginBottom: 12
+    },
+    bestScoreText: {
+      color: colors.activeText,
+      fontSize: 14,
+      position: 'absolute',
+      right: 15,
+      top: '50%',
+      transform: [{ translateY: -8 }]
     },
   });
 
@@ -94,23 +105,30 @@ const LevelsScreen = () => {
           const timeDisplay = hasTime ? ` (${formatTime(totalTime)})` : '';
           const statusIcon = isSolved ? '🎉' : hasTime ? '⏱️' : '';
           const labelText = `#${item.id} ${statusIcon}${timeDisplay}${locked ? ' 🔒' : ''}`;
+          const bestScore = bestScores[item.id];
+          const bestScoreDisplay = bestScore ? `🏆(${formatTime(bestScore)})` : '';
 
           return (
-            <Button
-              label={labelText}
-              disabled={locked}
-              containerStyle={[
-                styles.levelButton,
-                isCurrent && styles.currentLevel,
-                locked && styles.lockedLevel,
-                isSolved && styles.solved,
-              ]}
-              onPress={() => {
-                setCurrentPuzzle(item.id);
-                router.push('/play');
-              }}
-              textStyle={styles.levelText}
-            />
+            <View style={styles.levelButtonContainer}>
+              <Button
+                label={labelText}
+                disabled={locked}
+                containerStyle={[
+                  styles.levelButton,
+                  isCurrent && styles.currentLevel,
+                  locked && styles.lockedLevel,
+                  isSolved && styles.solved,
+                ]}
+                onPress={() => {
+                  setCurrentPuzzle(item.id);
+                  router.push('/play');
+                }}
+                textStyle={styles.levelText}
+              />
+              {bestScore && (
+                <Text style={styles.bestScoreText}>{bestScoreDisplay}</Text>
+              )}
+            </View>
           );
         }}
       />

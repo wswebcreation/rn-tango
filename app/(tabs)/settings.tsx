@@ -21,7 +21,7 @@ const SettingsScreen = () => {
   const handleReset = async () => {
     Alert.alert(
       'Reset App State',
-      'Are you sure you want to reset all puzzle progress? This will clear your solving history and times.',
+      'Are you sure you want to reset all puzzle progress? This will clear your solving history and times, but best scores will be preserved.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -30,12 +30,14 @@ const SettingsScreen = () => {
           onPress: async () => {
             try {
               await AsyncStorage.removeItem('tango-puzzle-storage');
+              const { bestScores } = useTangoStore.getState();
               useTangoStore.setState({
                 currentPuzzleId: 1,
                 puzzlesState: {},
                 solvedPuzzles: [],
+                bestScores, // Preserve best scores
               });
-              Alert.alert('Success', 'App state has been reset.');
+              Alert.alert('Success', 'App state has been reset. Best scores have been preserved.');
             } catch (error) {
               console.error('Failed to reset app state:', error);
               Alert.alert('Error', 'Failed to reset app state.');
