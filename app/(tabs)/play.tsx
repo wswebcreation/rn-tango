@@ -15,6 +15,7 @@ const PuzzleBoard = () => {
   const {
     currentPuzzleId,
     puzzlesState,
+    bestScores,
     goToNextPuzzle,
     goToPreviousPuzzle,
   } = useTangoStore();
@@ -102,17 +103,32 @@ const PuzzleBoard = () => {
       fontWeight: 'bold',
       padding: 12
     },
-    timer: {
-      color: colors.text,
-      fontSize: 14,
-      fontWeight: '600',
-      marginBottom: 16
-    },
     title: {
       color: colors.text,
       fontSize: 20,
       fontWeight: '600',
       marginBottom: 16
+    },
+    scoreContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 16,
+      position: 'relative',
+      width: '100%'
+    },
+    bestScore: {
+      color: colors.text,
+      fontSize: 14,
+      fontWeight: '600',
+      position: 'absolute',
+      left: 12,
+      bottom: 0,
+    },
+    timer: {
+      color: colors.text,
+      fontSize: 20,
+      fontWeight: '600'
     },
   });
 
@@ -156,8 +172,12 @@ const PuzzleBoard = () => {
     <SafeAreaView style={styles.container}>
       <Text style={styles.header}>🌑/☀️</Text>
       <Text style={styles.title}>Tango #{currentPuzzleId}</Text>
-      <Text style={styles.timer}>⏱️ {formatTime(elapsed)}</Text>
-
+      <View style={styles.scoreContainer}>
+        {bestScores[currentPuzzleId] && (
+          <Text style={styles.bestScore}>🏆 {formatTime(bestScores[currentPuzzleId])}</Text>
+        )}
+        <Text style={styles.timer}>⏱️ {formatTime(elapsed)}</Text>
+      </View>
       <PuzzleGrid 
         board={board}
         onCellPress={handleCellPress}

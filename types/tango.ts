@@ -90,6 +90,7 @@ export type TangoStore = {
   currentPuzzleId: number;
   puzzlesState: Record<number, PuzzleState>;
   solvedPuzzles: number[];
+  bestScores: Record<number, number>;
   themePreference: ThemePreference;
   
   // Timer Actions
