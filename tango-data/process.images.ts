@@ -10,8 +10,8 @@ import { calculateCropBoundaries, processAndSaveGridImages, type CropBoundaries,
 import { filterFilesToProcess, loadExistingPuzzles, logProcessingSummary, mergeAndSortPuzzles, savePuzzlesJson } from './utils/incremental-processing';
 import { getPrefilledDataWithManual } from './utils/prefill-detection';
 import { printValidationSummary } from './utils/validation-summary';
-import { drawCropBoundariesAndSave, drawDetectedSymbolsOnAreasImage } from './utils/visualization';
 import { updateVersionFile } from './utils/version-manager';
+import { drawCropBoundariesAndSave, drawDetectedSymbolsOnAreasImage } from './utils/visualization';
 
 // Configuration
 const processedImagesFolder = './tango-data/processed-images';
@@ -40,9 +40,7 @@ async function processImages(): Promise<void> {
     const { puzzles: existingPuzzles, existingIds } = loadExistingPuzzles();
     const puzzleNumbersToSkip = [
         0,
-        // 20, // Sees the mouse as a x, which is good, but not expected in the image
-        // 24, // Sees the mouse as a x, which is good, but not expected in the image
-        // 
+        321, // This is an 8X8 grid and we are not ready for that yet
 
     ];
     const { filesToProcess } = filterFilesToProcess(files, existingIds, puzzleNumbersToSkip);
