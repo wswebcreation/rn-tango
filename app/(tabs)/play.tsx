@@ -204,7 +204,7 @@ const PuzzleBoard = () => {
         </View>
       )}
       <View style={styles.scoreContainer}>
-        {bestScores[currentPuzzleId] && (
+        {bestScores[currentPuzzleId] != null && (
           <Text style={styles.bestScore}>🏆 {formatTime(bestScores[currentPuzzleId])}</Text>
         )}
         <Text style={styles.timer}>⏱️ {formatTime(elapsed)}</Text>

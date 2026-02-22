@@ -1,6 +1,6 @@
 import { useTheme } from '@/hooks/useTheme';
 import { ConstraintItem, PuzzleGridProps } from '@/types/tango';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { ConstraintText } from './ConstraintText';
 import { PuzzleCell } from './PuzzleCell';
@@ -13,22 +13,25 @@ export const PuzzleGrid = ({ board, onCellPress }: PuzzleGridProps) => {
   const constraintFontSize = Math.max(8, cellSize * 0.3);
   const constraintHeightWidth = Math.max(20, cellSize * 0.35);
   
-  const constraints: ConstraintItem[] = [];
-  board.forEach((row, rowIndex) => {
-    row.forEach((cell, colIndex) => {
-      if (cell.constraints && cell.constraints.length > 0) {
-        constraints.push({
-          constraints: cell.constraints,
-          row: rowIndex,
-          col: colIndex,
-          cellWidth,
-          cellHeight,
-        });
-      }
+  const constraints = useMemo<ConstraintItem[]>(() => {
+    const items: ConstraintItem[] = [];
+    board.forEach((row, rowIndex) => {
+      row.forEach((cell, colIndex) => {
+        if (cell.constraints && cell.constraints.length > 0) {
+          items.push({
+            constraints: cell.constraints,
+            row: rowIndex,
+            col: colIndex,
+            cellWidth,
+            cellHeight,
+          });
+        }
+      });
     });
-  });
+    return items;
+  }, [board, cellWidth, cellHeight]);
 
-  const styles = StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     gridContainer: {
       borderWidth: 2,
       borderColor: colors.line,
@@ -38,7 +41,7 @@ export const PuzzleGrid = ({ board, onCellPress }: PuzzleGridProps) => {
       flexDirection: 'row',
       overflow: 'visible',
     },
-  });
+  }), [colors.line]);
 
   return (
     <View style={styles.gridContainer}>

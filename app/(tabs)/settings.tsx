@@ -4,7 +4,9 @@ import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/Button';
+import { ASYNC_CURRENT_PUZZLE_KEY } from '@/constants/Constants';
 import { useTheme } from '@/hooks/useTheme';
+import { resetAllPuzzleStates } from '@/lib/database';
 import { fetchRemoteVersion, loadLocalVersion, resetToFallbackPuzzles } from '@/lib/puzzleManager';
 import { useTangoStore } from '@/store/useTangoStore';
 import { ThemePreference } from '@/types/tango';
@@ -29,7 +31,8 @@ const SettingsScreen = () => {
           style: 'destructive',
           onPress: async () => {
             try {
-              await AsyncStorage.removeItem('tango-puzzle-storage');
+              await resetAllPuzzleStates();
+              await AsyncStorage.setItem(ASYNC_CURRENT_PUZZLE_KEY, '1');
               const { bestScores } = useTangoStore.getState();
               useTangoStore.setState({
                 currentPuzzleId: 1,

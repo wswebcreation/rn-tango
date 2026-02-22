@@ -1,6 +1,6 @@
 import { useTheme } from '@/hooks/useTheme';
 import { PuzzleCellProps } from '@/types/tango';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 export const PuzzleCell = ({ 
@@ -15,7 +15,7 @@ export const PuzzleCell = ({
   const cellSize = Math.min(cellWidth, cellHeight);  
   const valueFontSize = Math.max(12, cellSize * 0.5);
 
-  const styles = StyleSheet.create({
+  const styles = useMemo(() => StyleSheet.create({
     cellValue: {
       color: colors.text,
       fontWeight: 'bold',
@@ -42,7 +42,7 @@ export const PuzzleCell = ({
     diagonalTopRightToBottomLeft: {
       transform: [{ translateX: '-50%' }, { translateY: '-50%' }, { rotate: '-45deg' }],
     },
-  });
+  }), [colors.text, colors.error]);
 
   return (
     <TouchableOpacity

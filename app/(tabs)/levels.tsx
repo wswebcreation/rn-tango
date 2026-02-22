@@ -118,8 +118,8 @@ const LevelsScreen = () => {
           const timeDisplay = hasTime ? ` (${formatTime(totalTime)})` : '';
           const statusIcon = isSolved ? '🎉' : hasTime ? '⏱️' : '';
           const labelText = `#${item.id} ${statusIcon}${timeDisplay}${locked ? ' 🔒' : ''}`;
-          const bestScore = bestScores[item.id];
-          const bestScoreDisplay = bestScore ? `🏆(${formatTime(bestScore)})` : '';
+          const bestScore = bestScores[item.id] ?? null;
+          const bestScoreDisplay = bestScore != null ? `🏆(${formatTime(bestScore)})` : '';
           const difficulty = item.difficulty ?? 0;
           const difficultyColors = ['#4ade80', '#a3e635', '#facc15', '#fb923c', '#f87171', '#e879f9', '#818cf8'];
 
@@ -140,7 +140,7 @@ const LevelsScreen = () => {
                 }}
                 textStyle={styles.levelText}
               />
-              {bestScore && !difficulty && (
+              {bestScore != null && !difficulty && (
                 <Text style={styles.bestScoreText}>{bestScoreDisplay}</Text>
               )}
               {difficulty > 0 && (
