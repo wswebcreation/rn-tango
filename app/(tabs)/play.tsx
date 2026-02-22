@@ -130,6 +130,17 @@ const PuzzleBoard = () => {
       fontSize: 20,
       fontWeight: '600'
     },
+    difficultyRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      marginBottom: 12,
+    },
+    difficultyDot: {
+      width: 10,
+      height: 10,
+      borderRadius: 5,
+    },
   });
 
   const solvedButtonClass = isSolved ? styles.solvedButton : {};
@@ -168,10 +179,30 @@ const PuzzleBoard = () => {
     })
   );
 
+  const difficultyColors = ['#4ade80', '#a3e635', '#facc15', '#fb923c', '#f87171', '#e879f9', '#818cf8'];
+  const difficultyLabels = ['', 'Easy', 'Moderate', 'Medium', 'Challenging', 'Hard', 'Very Hard', 'Expert'];
+  const difficulty = puzzle.difficulty ?? 0;
+
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.header}>🌑/☀️</Text>
       <Text style={styles.title}>Tango #{currentPuzzleId}</Text>
+      {difficulty > 0 && (
+        <View style={styles.difficultyRow}>
+          {Array.from({ length: 7 }, (_, i) => (
+            <View
+              key={i}
+              style={[
+                styles.difficultyDot,
+                { backgroundColor: i < difficulty ? difficultyColors[difficulty - 1] : colors.inactive },
+              ]}
+            />
+          ))}
+          <Text style={[styles.bestScore, { position: 'relative', left: 0, bottom: 0, marginLeft: 6 }]}>
+            {difficultyLabels[difficulty]}
+          </Text>
+        </View>
+      )}
       <View style={styles.scoreContainer}>
         {bestScores[currentPuzzleId] && (
           <Text style={styles.bestScore}>🏆 {formatTime(bestScores[currentPuzzleId])}</Text>

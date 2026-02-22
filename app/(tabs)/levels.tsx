@@ -76,6 +76,19 @@ const LevelsScreen = () => {
       top: '50%',
       transform: [{ translateY: -8 }]
     },
+    difficultyDots: {
+      flexDirection: 'row',
+      gap: 3,
+      position: 'absolute',
+      right: 15,
+      top: '50%',
+      transform: [{ translateY: -5 }],
+    },
+    difficultyDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
   });
 
   if (loading) {
@@ -107,6 +120,8 @@ const LevelsScreen = () => {
           const labelText = `#${item.id} ${statusIcon}${timeDisplay}${locked ? ' 🔒' : ''}`;
           const bestScore = bestScores[item.id];
           const bestScoreDisplay = bestScore ? `🏆(${formatTime(bestScore)})` : '';
+          const difficulty = item.difficulty ?? 0;
+          const difficultyColors = ['#4ade80', '#a3e635', '#facc15', '#fb923c', '#f87171', '#e879f9', '#818cf8'];
 
           return (
             <View style={styles.levelButtonContainer}>
@@ -125,8 +140,21 @@ const LevelsScreen = () => {
                 }}
                 textStyle={styles.levelText}
               />
-              {bestScore && (
+              {bestScore && !difficulty && (
                 <Text style={styles.bestScoreText}>{bestScoreDisplay}</Text>
+              )}
+              {difficulty > 0 && (
+                <View style={styles.difficultyDots}>
+                  {Array.from({ length: 7 }, (_, i) => (
+                    <View
+                      key={i}
+                      style={[
+                        styles.difficultyDot,
+                        { backgroundColor: i < difficulty ? difficultyColors[difficulty - 1] : 'rgba(255,255,255,0.2)' },
+                      ]}
+                    />
+                  ))}
+                </View>
               )}
             </View>
           );

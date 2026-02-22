@@ -25,6 +25,7 @@ export interface Puzzle {
   size: number;
   prefilled: Record<CellCoordinate, CellValue>;
   constraints: Constraint[];
+  difficulty?: number;
 }
 
 export type PuzzleLevel = Puzzle[];

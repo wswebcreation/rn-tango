@@ -1,7 +1,43 @@
 import { BoardState, CellCoordinate, CellValue, Move, PuzzleState, TangoStore, ThemePreference } from '@/types/tango';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+
+/**
+ * Hybrid storage adapter:
+ * - Reads from SecureStore first; falls back to AsyncStorage (for one-time migration)
+ * - Always writes to SecureStore (persists across app reinstalls on iOS via Keychain)
+ * - Removes from both on clear
+ *
+ * iOS Keychain has no practical size limit (the 2048-byte cap is Android only).
+ */
+const secureStorage = {
+  getItem: async (key: string): Promise<string | null> => {
+    const secure = await SecureStore.getItemAsync(key);
+    if (secure !== null) return secure;
+
+    // One-time migration: copy existing AsyncStorage data into SecureStore
+    const legacy = await AsyncStorage.getItem(key);
+    if (legacy !== null) {
+      try {
+        await SecureStore.setItemAsync(key, legacy);
+        await AsyncStorage.removeItem(key);
+      } catch {
+        // If migration fails just continue using AsyncStorage this session
+        return legacy;
+      }
+    }
+    return legacy;
+  },
+  setItem: async (key: string, value: string): Promise<void> => {
+    await SecureStore.setItemAsync(key, value);
+  },
+  removeItem: async (key: string): Promise<void> => {
+    await SecureStore.deleteItemAsync(key).catch(() => {});
+    await AsyncStorage.removeItem(key).catch(() => {});
+  },
+};
 
 const createBoardState = (): BoardState => ({
   cells: {},
@@ -321,7 +357,7 @@ export const useTangoStore = create<TangoStore>()(
     }),
     {
       name: 'tango-puzzle-storage',
-      storage: createJSONStorage(() => AsyncStorage),
+      storage: createJSONStorage(() => secureStorage),
     }
   )
 ); 
