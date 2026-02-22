@@ -20,6 +20,24 @@ import {
   ThemePreference,
 } from '@/types/tango';
 
+// ── DB save debounce ──────────────────────────────────────────────────────────
+// Rapid taps would otherwise queue a DB write per tap. We batch them instead.
+const saveTimers = new Map<number, ReturnType<typeof setTimeout>>();
+
+function debouncedSavePuzzleState(
+  puzzleId: number,
+  state: PuzzleState,
+  bestScore: number | null
+) {
+  const existing = saveTimers.get(puzzleId);
+  if (existing) clearTimeout(existing);
+  const timer = setTimeout(() => {
+    saveTimers.delete(puzzleId);
+    savePuzzleState(toDbState(puzzleId, state, bestScore)).catch(console.error);
+  }, 500);
+  saveTimers.set(puzzleId, timer);
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 const createBoardState = (): BoardState => ({
@@ -210,7 +228,7 @@ export const useTangoStore = create<TangoStore>()((set, get) => ({
       puzzlesState: { ...state.puzzlesState, [puzzleId]: newPuzzleState },
     }));
 
-    savePuzzleState(toDbState(puzzleId, newPuzzleState, bestScores[puzzleId] ?? null)).catch(console.error);
+    debouncedSavePuzzleState(puzzleId, newPuzzleState, bestScores[puzzleId] ?? null);
   },
 
   undoLastMove: (puzzleId: number) => {

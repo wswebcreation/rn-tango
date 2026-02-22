@@ -131,67 +131,56 @@ export function usePuzzleLogic(puzzle: Puzzle | undefined, puzzleId: number) {
   const isPuzzleComplete = useMemo(() => {
     if (!puzzle) return false;
 
+    // Fast fill check
     for (let row = 0; row < puzzle.size; row++) {
       for (let col = 0; col < puzzle.size; col++) {
         if (!boardMatrix[row][col]) return false;
       }
     }
 
+    // Adjacency check via triplet scan — O(N²) instead of O(N³)
     for (let row = 0; row < puzzle.size; row++) {
-      for (let col = 0; col < puzzle.size; col++) {
-        const value = boardMatrix[row][col];
-        if (!value) continue;
-
-        let horizontalCount = 1;
-        for (let c = col - 1; c >= 0 && boardMatrix[row][c] === value; c--) {
-          horizontalCount++;
-        }
-        for (let c = col + 1; c < puzzle.size && boardMatrix[row][c] === value; c++) {
-          horizontalCount++;
-        }
-        if (horizontalCount > 2) return false;
-
-        let verticalCount = 1;
-        for (let r = row - 1; r >= 0 && boardMatrix[r][col] === value; r--) {
-          verticalCount++;
-        }
-        for (let r = row + 1; r < puzzle.size && boardMatrix[r][col] === value; r++) {
-          verticalCount++;
-        }
-        if (verticalCount > 2) return false;
+      for (let col = 0; col < puzzle.size - 2; col++) {
+        if (
+          boardMatrix[row][col] === boardMatrix[row][col + 1] &&
+          boardMatrix[row][col + 1] === boardMatrix[row][col + 2]
+        ) return false;
+      }
+    }
+    for (let col = 0; col < puzzle.size; col++) {
+      for (let row = 0; row < puzzle.size - 2; row++) {
+        if (
+          boardMatrix[row][col] === boardMatrix[row + 1][col] &&
+          boardMatrix[row + 1][col] === boardMatrix[row + 2][col]
+        ) return false;
       }
     }
 
+    // Balance check
     for (let row = 0; row < puzzle.size; row++) {
       let suns = 0, moons = 0;
       for (let col = 0; col < puzzle.size; col++) {
-        const value = boardMatrix[row][col];
-        if (value === "☀️") suns++;
-        else if (value === "🌑") moons++;
+        if (boardMatrix[row][col] === "☀️") suns++;
+        else moons++;
       }
       if (suns !== moons) return false;
     }
-
     for (let col = 0; col < puzzle.size; col++) {
       let suns = 0, moons = 0;
       for (let row = 0; row < puzzle.size; row++) {
-        const value = boardMatrix[row][col];
-        if (value === "☀️") suns++;
-        else if (value === "🌑") moons++;
+        if (boardMatrix[row][col] === "☀️") suns++;
+        else moons++;
       }
       if (suns !== moons) return false;
     }
 
+    // Constraint check — O(C)
     for (const constraint of puzzle.constraints) {
       const [coord1, coord2, constraintType] = constraint;
       const [row1, col1] = coord1.split(',').map(Number);
       const [row2, col2] = coord2.split(',').map(Number);
-
       const value1 = boardMatrix[row1][col1];
       const value2 = boardMatrix[row2][col2];
-
-      if (!value1 || !value2) continue;
-
       if (constraintType === "=" && value1 !== value2) return false;
       if (constraintType === "x" && value1 === value2) return false;
     }
@@ -205,14 +194,21 @@ export function usePuzzleLogic(puzzle: Puzzle | undefined, puzzleId: number) {
     }
   }, [isPuzzleComplete, puzzleState, markPuzzleSolved, puzzleId]);
 
+  const lastPressTimes = useRef<Map<string, number>>(new Map());
+
   const handleCellPress = (row: number, col: number) => {
     if (!puzzle) return;
-    
+
     const coordinate: CellCoordinate = `${row},${col}`;
-    
+
     if (coordinate in puzzle.prefilled) return;
-    
     if (puzzleState?.isSolved) return;
+
+    // Per-cell throttle: ignore taps on the same cell within 150 ms to prevent
+    // accidental double-fires and redundant validation/DB-write bursts.
+    const now = Date.now();
+    if (now - (lastPressTimes.current.get(coordinate) ?? 0) < 150) return;
+    lastPressTimes.current.set(coordinate, now);
 
     toggleCell(puzzleId, row, col);
   };
@@ -268,90 +264,69 @@ export function usePuzzleLogic(puzzle: Puzzle | undefined, puzzleId: number) {
 
   const immediateErrors = useMemo(() => {
     if (!puzzle) return new Set<string>();
-    
+
     const errors = new Set<string>();
-    const checkAdjacentCells = (row: number, col: number): boolean => {
-      const value = boardMatrix[row][col];
-      if (!value) return true;
 
-      let horizontalCount = 1;
-      for (let c = col - 1; c >= 0 && boardMatrix[row][c] === value; c--) {
-        horizontalCount++;
-      }
-      for (let c = col + 1; c < puzzle.size && boardMatrix[row][c] === value; c++) {
-        horizontalCount++;
-      }
-      if (horizontalCount > 2) return false;
-
-      let verticalCount = 1;
-      for (let r = row - 1; r >= 0 && boardMatrix[r][col] === value; r--) {
-        verticalCount++;
-      }
-      for (let r = row + 1; r < puzzle.size && boardMatrix[r][col] === value; r++) {
-        verticalCount++;
-      }
-      if (verticalCount > 2) return false;
-
-      return true;
-    };
-
+    // 1. Adjacency: triplet scan — O(N²), each group of 3 checked once
     for (let row = 0; row < puzzle.size; row++) {
+      for (let col = 0; col < puzzle.size - 2; col++) {
+        const v = boardMatrix[row][col];
+        if (v && v === boardMatrix[row][col + 1] && v === boardMatrix[row][col + 2]) {
+          errors.add(`${row},${col}`);
+          errors.add(`${row},${col + 1}`);
+          errors.add(`${row},${col + 2}`);
+        }
+      }
+    }
+    for (let col = 0; col < puzzle.size; col++) {
+      for (let row = 0; row < puzzle.size - 2; row++) {
+        const v = boardMatrix[row][col];
+        if (v && v === boardMatrix[row + 1][col] && v === boardMatrix[row + 2][col]) {
+          errors.add(`${row},${col}`);
+          errors.add(`${row + 1},${col}`);
+          errors.add(`${row + 2},${col}`);
+        }
+      }
+    }
+
+    // 2. Balance: only for complete rows/cols — O(N²) total
+    for (let row = 0; row < puzzle.size; row++) {
+      if (!boardMatrix[row].every(cell => cell !== undefined)) continue;
+      let suns = 0, moons = 0;
       for (let col = 0; col < puzzle.size; col++) {
-        const coordinate: CellCoordinate = `${row},${col}`;
-        const value = boardMatrix[row][col];
-        
-        if (!value) continue;
-        
-        const rowComplete = boardMatrix[row].every(cell => cell !== undefined);
-        const colComplete = boardMatrix.every(rowArray => rowArray[col] !== undefined);
+        if (boardMatrix[row][col] === "☀️") suns++;
+        else moons++;
+      }
+      if (suns !== moons) {
+        for (let col = 0; col < puzzle.size; col++) errors.add(`${row},${col}`);
+      }
+    }
+    for (let col = 0; col < puzzle.size; col++) {
+      if (!boardMatrix.every(rowArray => rowArray[col] !== undefined)) continue;
+      let suns = 0, moons = 0;
+      for (let row = 0; row < puzzle.size; row++) {
+        if (boardMatrix[row][col] === "☀️") suns++;
+        else moons++;
+      }
+      if (suns !== moons) {
+        for (let row = 0; row < puzzle.size; row++) errors.add(`${row},${col}`);
+      }
+    }
 
-        if (rowComplete || colComplete) {
-          if (!checkAdjacentCells(row, col)) {
-            errors.add(coordinate);
-          }
-
-          if (rowComplete) {
-            const suns = boardMatrix[row].filter(cell => cell === "☀️").length;
-            const moons = boardMatrix[row].filter(cell => cell === "🌑").length;
-            if (suns !== moons) {
-              for (let c = 0; c < puzzle.size; c++) {
-                if (boardMatrix[row][c]) {
-                  errors.add(`${row},${c}`);
-                }
-              }
-            }
-          }
-
-          if (colComplete) {
-            const suns = boardMatrix.map(rowArray => rowArray[col]).filter(cell => cell === "☀️").length;
-            const moons = boardMatrix.map(rowArray => rowArray[col]).filter(cell => cell === "🌑").length;
-            if (suns !== moons) {
-              for (let r = 0; r < puzzle.size; r++) {
-                if (boardMatrix[r][col]) {
-                  errors.add(`${r},${col}`);
-                }
-              }
-            }
-          }
-
-          for (const constraint of puzzle.constraints) {
-            const [coord1, coord2, constraintType] = constraint;
-            const [row1, col1] = coord1.split(',').map(Number);
-            const [row2, col2] = coord2.split(',').map(Number);
-
-            const value1 = boardMatrix[row1][col1];
-            const value2 = boardMatrix[row2][col2];
-
-            if (value1 && value2) {
-              if (constraintType === "=" && value1 !== value2) {
-                errors.add(coord1);
-                errors.add(coord2);
-              } else if (constraintType === "x" && value1 === value2) {
-                errors.add(coord1);
-                errors.add(coord2);
-              }
-            }
-          }
+    // 3. Constraints: run ONCE — O(C) instead of O(N²×C)
+    for (const constraint of puzzle.constraints) {
+      const [coord1, coord2, constraintType] = constraint;
+      const [row1, col1] = coord1.split(',').map(Number);
+      const [row2, col2] = coord2.split(',').map(Number);
+      const value1 = boardMatrix[row1][col1];
+      const value2 = boardMatrix[row2][col2];
+      if (value1 && value2) {
+        if (constraintType === "=" && value1 !== value2) {
+          errors.add(coord1);
+          errors.add(coord2);
+        } else if (constraintType === "x" && value1 === value2) {
+          errors.add(coord1);
+          errors.add(coord2);
         }
       }
     }
