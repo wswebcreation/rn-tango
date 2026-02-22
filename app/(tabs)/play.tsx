@@ -154,7 +154,7 @@ const PuzzleBoard = () => {
       );
   }
 
-  const size = puzzle.size;
+  const size: number = puzzle.size;
   const board: CellData[][] = Array.from({ length: size }, (_, rowIndex) =>
     Array.from({ length: size }, (_, colIndex) => {
       const key = `${rowIndex},${colIndex}`;

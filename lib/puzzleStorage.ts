@@ -1,5 +1,5 @@
 import { PUZZLES_PATH, REMOTE_PUZZLES_URL, REMOTE_VERSION_URL, VERSION_KEY } from '@/constants/Constants';
-import fallbackPuzzles from '@/constants/fallbackPuzzles.json';
+import bundledPuzzles from '@/app-data/puzzles.json';
 import { Puzzle } from '@/types/tango';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
@@ -10,7 +10,8 @@ export async function loadLocalPuzzles() {
 
     return JSON.parse(data);
   } catch {
-    return fallbackPuzzles;
+    // Fall back to the full puzzle set bundled with the app
+    return bundledPuzzles;
   }
 }
 
@@ -42,23 +43,21 @@ export async function fetchRemotePuzzles() {
 export async function initializePuzzlesIfNeeded (): Promise<boolean>  {
   try {
     const existingPuzzles = await loadLocalPuzzles();
-    
+
     if (!existingPuzzles || existingPuzzles.length === 0) {
-      const fallbackPuzzles = require('@/constants/fallbackPuzzles.json');
-      await savePuzzlesLocally(fallbackPuzzles);
-      console.log('Initialized with fallback puzzles');
-      return true; 
+      await savePuzzlesLocally(bundledPuzzles);
+      console.log('Initialized with bundled puzzles');
+      return true;
     }
-    
-    return false; 
+
+    return false;
   } catch (error) {
     console.error('Error initializing puzzles:', error);
     try {
-      const fallbackPuzzles = require('@/constants/fallbackPuzzles.json');
-      await savePuzzlesLocally(fallbackPuzzles);
+      await savePuzzlesLocally(bundledPuzzles);
       return true;
     } catch (fallbackError) {
-      console.error('Failed to load fallback puzzles:', fallbackError);
+      console.error('Failed to load bundled puzzles:', fallbackError);
       return false;
     }
   }
