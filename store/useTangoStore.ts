@@ -293,8 +293,19 @@ export const useTangoStore = create<TangoStore>()(
       },
 
       goToNextPuzzle: () => {
-        const { currentPuzzleId } = get();
-        set({ currentPuzzleId: currentPuzzleId + 1 });
+        const { currentPuzzleId, puzzlesState } = get();
+        const nextId = currentPuzzleId + 1;
+        if (!puzzlesState[nextId]) {
+          set({
+            currentPuzzleId: nextId,
+            puzzlesState: {
+              ...puzzlesState,
+              [nextId]: createPuzzleState(),
+            },
+          });
+        } else {
+          set({ currentPuzzleId: nextId });
+        }
       },
 
       goToPreviousPuzzle: () => {
