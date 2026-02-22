@@ -112,4 +112,13 @@ export type TangoStore = {
   
   // Theme Actions
   setThemePreference: (preference: ThemePreference) => void;
+
+  // Hydration (called once at startup after DB is loaded)
+  hydrate: (data: {
+    currentPuzzleId: number;
+    puzzlesState: Record<number, PuzzleState>;
+    solvedPuzzles: number[];
+    bestScores: Record<number, number>;
+    themePreference: ThemePreference;
+  }) => void;
 };
