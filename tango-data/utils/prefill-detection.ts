@@ -4,6 +4,14 @@ import { CellCoordinate, PrefilledData } from "../types/shared-types";
 import { DEBUG, GRID_SIZE } from "./constants";
 import { drawPrefilledCellsVisualization } from "./visualization";
 
+function getPixelRgb(image: typeof Jimp.prototype, x: number, y: number): { r: number; g: number; b: number } {
+    const px = Math.min(Math.max(0, Math.floor(x)), image.bitmap.width - 1);
+    const py = Math.min(Math.max(0, Math.floor(y)), image.bitmap.height - 1);
+    const idx = (py * image.bitmap.width + px) * 4;
+    const data = image.bitmap.data;
+    return { r: data[idx], g: data[idx + 1], b: data[idx + 2] };
+}
+
 export async function getPrefilledData(gridCroppedImage: typeof Jimp.prototype, prefilledImagesFolder: string, fileName: string): Promise<{
     prefilledData: PrefilledData,
     prefilledImage: typeof Jimp.prototype
@@ -84,12 +92,7 @@ function analyzeBackgroundColor(image: typeof Jimp.prototype, cellX: number, cel
         const x = Math.min(Math.max(0, Math.floor(point.x)), image.bitmap.width - 1);
         const y = Math.min(Math.max(0, Math.floor(point.y)), image.bitmap.height - 1);
         
-        const pixelColor = image.getPixelColor(x, y);
-        
-        // Extract RGB values (assuming greyscale, so R=G=B)
-        const r = (pixelColor >> 24) & 0xFF;
-        const g = (pixelColor >> 16) & 0xFF;
-        const b = (pixelColor >> 8) & 0xFF;
+        const { r, g, b } = getPixelRgb(image, x, y);
         
         // Calculate brightness (0-255)
         const brightness = (r + g + b) / 3;
@@ -119,12 +122,7 @@ function analyzeBackgroundColor(image: typeof Jimp.prototype, cellX: number, cel
  * Samples most of the cell area to account for off-center icons
  */
 function analyzeIconType(image: typeof Jimp.prototype, cellX: number, cellY: number, cellWidth: number, cellHeight: number): "☀️" | "🌑" {
-    // Define color ranges for sun and moon
-    const SUN_COLOR = { r: 244, g: 170, b: 35 }; // #f4aa23
-    const MOON_COLOR = { r: 68, g: 129, b: 222 }; // #4481de
-    const COLOR_TOLERANCE = 50; // Tolerance for color matching
-    
-    // Sample most of the cell area (just avoid the very edges where grey background is)
+    // Sample most of the cell area (avoid very edges/background)
     const edgeMargin = Math.min(cellWidth, cellHeight) * 0.15; // 15% margin from edges (smaller than before)
     const sampleStartX = cellX + edgeMargin;
     const sampleEndX = cellX + cellWidth - edgeMargin;
@@ -133,7 +131,7 @@ function analyzeIconType(image: typeof Jimp.prototype, cellX: number, cellY: num
     
     let sunColorCount = 0;
     let moonColorCount = 0;
-    let totalSamples = 0;
+    let coloredSamples = 0;
     
     // Sample pixels in a grid pattern within the cell area
     const sampleStep = 2; // Sample every 2 pixels for better coverage of off-center icons
@@ -144,41 +142,38 @@ function analyzeIconType(image: typeof Jimp.prototype, cellX: number, cellY: num
             const pixelX = Math.min(Math.max(0, Math.floor(x)), image.bitmap.width - 1);
             const pixelY = Math.min(Math.max(0, Math.floor(y)), image.bitmap.height - 1);
             
-            const pixelColor = image.getPixelColor(pixelX, pixelY);
+            const { r, g, b } = getPixelRgb(image, pixelX, pixelY);
             
-            // Extract RGB values
-            const r = (pixelColor >> 24) & 0xFF;
-            const g = (pixelColor >> 16) & 0xFF;
-            const b = (pixelColor >> 8) & 0xFF;
-            
-            // Check if pixel matches sun color (orange/yellow range)
-            const sunDistance = Math.sqrt(
-                Math.pow(r - SUN_COLOR.r, 2) + 
-                Math.pow(g - SUN_COLOR.g, 2) + 
-                Math.pow(b - SUN_COLOR.b, 2)
-            );
-            
-            // Check if pixel matches moon color (blue range)
-            const moonDistance = Math.sqrt(
-                Math.pow(r - MOON_COLOR.r, 2) + 
-                Math.pow(g - MOON_COLOR.g, 2) + 
-                Math.pow(b - MOON_COLOR.b, 2)
-            );
-            
-            if (sunDistance <= COLOR_TOLERANCE) {
-                sunColorCount++;
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            const delta = max - min;
+            const saturation = max === 0 ? 0 : delta / max;
+            if (saturation < 0.2) {
+                continue; // ignore near-greyscale background/shadow pixels
             }
-            
-            if (moonDistance <= COLOR_TOLERANCE) {
-                moonColorCount++;
+
+            coloredSamples++;
+
+            // Approx hue in degrees [0..360)
+            let hue = 0;
+            if (delta !== 0) {
+                if (max === r) hue = ((g - b) / delta) % 6;
+                else if (max === g) hue = (b - r) / delta + 2;
+                else hue = (r - g) / delta + 4;
+                hue *= 60;
+                if (hue < 0) hue += 360;
             }
-            
-            totalSamples++;
+
+            const isSunHue = hue >= 20 && hue <= 70;
+            const isMoonHue = hue >= 180 && hue <= 260;
+
+            if (isSunHue || (r > g && g > b && r - b > 20)) sunColorCount++;
+            if (isMoonHue || (b > g && b > r && b - r > 20)) moonColorCount++;
         }
     }
     
     if (DEBUG) {
-        console.log(`  🎨 Icon color analysis: Sun pixels: ${sunColorCount}, Moon pixels: ${moonColorCount}, Total samples: ${totalSamples}`);
+        console.log(`  🎨 Icon color analysis: Sun pixels: ${sunColorCount}, Moon pixels: ${moonColorCount}, Colored samples: ${coloredSamples}`);
     }
     
     // Determine icon type based on which color is more prevalent
@@ -187,10 +182,30 @@ function analyzeIconType(image: typeof Jimp.prototype, cellX: number, cellY: num
     } else if (moonColorCount > sunColorCount) {
         return "🌑";
     } else {
-        // Default to moon if no clear winner or no colored pixels found
-        if (DEBUG) console.log(`  ⚠️ No clear icon color detected, defaulting to moon`);
-        return "🌑";
+        // Fallback: suns are often brighter than moons in these assets
+        if (DEBUG) console.log(`  ⚠️ No clear icon color detected, defaulting by brightness`);
+        return "☀️";
     }
+}
+
+/**
+ * Detects icon type for every cell in the grid (used for solved/answer images).
+ */
+export function detectAllCellIcons(gridCroppedImage: typeof Jimp.prototype): PrefilledData {
+    const allCells: PrefilledData = {};
+    const cellWidth = Math.floor(gridCroppedImage.bitmap.width / GRID_SIZE);
+    const cellHeight = Math.floor(gridCroppedImage.bitmap.height / GRID_SIZE);
+
+    for (let row = 0; row < GRID_SIZE; row++) {
+        for (let col = 0; col < GRID_SIZE; col++) {
+            const cellCoord: CellCoordinate = `${row},${col}`;
+            const cellX = col * cellWidth;
+            const cellY = row * cellHeight;
+            allCells[cellCoord] = analyzeIconType(gridCroppedImage, cellX, cellY, cellWidth, cellHeight);
+        }
+    }
+
+    return allCells;
 }
 
 /**
