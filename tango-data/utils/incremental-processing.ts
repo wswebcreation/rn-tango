@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from 'fs';
 import { ExistingPuzzlesData, ProcessingFilters, PuzzleMergeResult } from '../types/processing-types';
 import { Puzzle } from '../types/shared-types';
 import { DEBUG } from './constants';
+import { applyWeeklyDifficultyToAll } from './weekly-difficulty';
 
 /**
  * Loads existing puzzles from puzzles.json and extracts their IDs
@@ -75,6 +76,7 @@ export function savePuzzlesJson(
     updateVersionCallback: () => void
 ): void {
     if (newPuzzlesCount > 0) {
+        applyWeeklyDifficultyToAll(allPuzzles);
         const jsonOutput = JSON.stringify(allPuzzles, null, 0);
         const outputPath = './app-data/puzzles.json';
         

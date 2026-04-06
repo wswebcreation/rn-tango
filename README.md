@@ -47,6 +47,20 @@ npm run process-tango-images -- --from=500 --to=510
 
 Valid puzzles are merged into `app-data/puzzles.json` (existing ids are skipped).
 
+### Difficulty (Monday → Sunday)
+
+Difficulty **1–7** in the app follows a **weekly slot**: **Monday is easiest (1)**, **Sunday is hardest (7)**, matching the usual Try Hard release pattern. It is derived **only from puzzle `id`**, not from solver heuristics.
+
+The phase is fixed by **`WEEKLY_DIFFICULTY_ANCHOR_MONDAY_ID`** in `tango-data/utils/weekly-difficulty.ts` (puzzle **546** is treated as Monday). Neighbouring ids advance one weekday at a time; every seventh step wraps back to Monday.
+
+After editing `puzzles.json` or changing the anchor, recompute difficulties for **all** puzzles:
+
+```bash
+npm run apply-weekly-difficulty
+```
+
+`npm run process-tango-images` applies the same rule when it writes the merged file (so every entry stays aligned). **`npm run generate-puzzles`** still fills toward `TARGET_TOTAL` in `scripts/generate-puzzles.ts`, then applies this weekly mapping before save.
+
 ### Processing guarantees and fallbacks
 
 - Every added puzzle is validated to have **exactly one solution**.

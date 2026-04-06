@@ -2,8 +2,8 @@
 /**
  * Tango Puzzle Generator
  * ======================
- * - Rates existing puzzles with difficulty 1-7 using a constraint-propagation solver
- * - Generates new unique 6×6 puzzles organised in sets of 7 (difficulty 1→7)
+ * - Assigns difficulty 1–7 from weekly slots (Monday easiest → Sunday hardest; see tango-data/utils/weekly-difficulty.ts)
+ * - Generates new unique 6×6 puzzles (target clue density follows that puzzle id’s weekday slot)
  * - Deduplicates against all existing puzzles
  * - Writes minified JSON to app-data/puzzles.json
  *
@@ -13,6 +13,7 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import { applyWeeklyDifficultyToAll, difficultyFromPuzzleId } from '../tango-data/utils/weekly-difficulty';
 
 // ---------------------------------------------------------------------------
 // Types & constants
@@ -392,28 +393,6 @@ function generatePuzzle(
 }
 
 // ---------------------------------------------------------------------------
-// Difficulty normalisation (percentile-based, guarantees all 7 levels used)
-// ---------------------------------------------------------------------------
-
-function hardnessScore(p: RawPuzzle): number {
-  const grid   = makeGrid(p.prefilled);
-  const parsed = parseConstraints(p.constraints);
-  const { maxDepth, unsolved } = propagateFull(grid.map(r => [...r]), parsed);
-  const totalClues = Object.keys(p.prefilled).length + p.constraints.length;
-  return (36 - totalClues) * 2 + maxDepth * 5 + (unsolved > 0 ? 15 : 0);
-}
-
-function normaliseDifficulty(puzzles: RawPuzzle[]): RawPuzzle[] {
-  const scores = puzzles.map((p, i) => ({ score: hardnessScore(p), i }));
-  scores.sort((a, b) => a.score - b.score);
-  const n = scores.length;
-  for (let rank = 0; rank < n; rank++) {
-    puzzles[scores[rank].i].difficulty = Math.min(Math.floor((rank * 7) / n) + 1, 7);
-  }
-  return puzzles;
-}
-
-// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
@@ -425,13 +404,6 @@ function main(): void {
   const puzzles: RawPuzzle[] = JSON.parse(fs.readFileSync(puzzlesPath, 'utf-8'));
   console.log(`Loaded ${puzzles.length} existing puzzles`);
 
-  // Rate existing puzzles (raw pass – normalised later)
-  console.log('Rating existing puzzles …');
-  puzzles.forEach((p, i) => {
-    if (p.difficulty === undefined) p.difficulty = measureDifficulty(p.prefilled, p.constraints);
-    if ((i + 1) % 100 === 0) process.stdout.write(`  ${i + 1}/${puzzles.length} rated\n`);
-  });
-
   // Build dedup fingerprint set
   const existingFps = new Set(puzzles.map(p => fingerprint(p.prefilled, p.constraints)));
 
@@ -440,10 +412,10 @@ function main(): void {
   const solutions = enumerateSolutions();
   console.log(`Found ${solutions.length} valid solution grids`);
 
-  // Generate new puzzles in sets of 7
+  // Generate new puzzles (one weekday slot per id)
   const TARGET_TOTAL = 1000;
   const needed       = TARGET_TOTAL - puzzles.length;
-  console.log(`\nGenerating ${needed} new puzzles (sets of 7, difficulties 1→7) …`);
+  console.log(`\nGenerating ${needed} new puzzles (weekday target 1→7 per puzzle id) …`);
 
   const newPuzzles: RawPuzzle[] = [];
   let nextId   = Math.max(...puzzles.map(p => p.id)) + 1;
@@ -454,29 +426,32 @@ function main(): void {
   while (newPuzzles.length < needed) {
     const solution = solutions[solIdx % solutions.length];
     solIdx++;
-    let gotOne = false;
-
-    for (let td = 1; td <= 7; td++) {
-      if (newPuzzles.length >= needed) break;
-      const result = generatePuzzle(solution, td, existingFps);
-      if (result) {
-        newPuzzles.push({ id: nextId++, size: SIZE, ...result });
-        gotOne = true;
-        if (newPuzzles.length % 50 === 0) process.stdout.write(`  Generated ${newPuzzles.length}/${needed} …\n`);
-      }
+    const td = difficultyFromPuzzleId(nextId);
+    const result = generatePuzzle(solution, td, existingFps);
+    if (result) {
+      const id = nextId++;
+      newPuzzles.push({
+        id,
+        size: SIZE,
+        prefilled: result.prefilled,
+        constraints: result.constraints,
+        difficulty: difficultyFromPuzzleId(id),
+      });
+      if (newPuzzles.length % 50 === 0) process.stdout.write(`  Generated ${newPuzzles.length}/${needed} …\n`);
+      fails = 0;
+    } else {
+      fails++;
     }
 
-    if (gotOne) { fails = 0; } else { fails++; }
     if (fails >= MAX_FAILS) {
       process.stderr.write(`Warning: exhausted solution space after ${newPuzzles.length} new puzzles.\n`);
       break;
     }
   }
 
-  // Percentile-normalise difficulty across all puzzles
   const allPuzzles = [...puzzles, ...newPuzzles];
-  console.log(`\nNormalising difficulty 1-7 across ${allPuzzles.length} puzzles …`);
-  normaliseDifficulty(allPuzzles);
+  console.log(`\nApplying weekly difficulty (Mon→Sun) to ${allPuzzles.length} puzzles …`);
+  applyWeeklyDifficultyToAll(allPuzzles);
 
   // Save (minified)
   fs.writeFileSync(puzzlesPath, JSON.stringify(allPuzzles), 'utf-8');

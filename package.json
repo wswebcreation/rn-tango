@@ -6,6 +6,7 @@
     "start": "expo start",
     "reset-project": "node ./scripts/reset-project.js",
     "generate-puzzles": "npx ts-node --project scripts/tsconfig.json scripts/generate-puzzles.ts",
+    "apply-weekly-difficulty": "npx ts-node --project scripts/tsconfig.json scripts/apply-weekly-difficulty.ts",
     "download-tango-images": "npx ts-node --project scripts/tsconfig.json scripts/download-tango-images.ts",
     "process-tango-images": "npx ts-node --project tango-data/tsconfig.json tango-data/process.images.ts",
     "android": "expo start --android",
