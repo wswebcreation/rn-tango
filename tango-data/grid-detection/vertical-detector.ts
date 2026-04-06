@@ -45,8 +45,9 @@ export function detectLeftVerticalLine(image: any): GridLine | null {
         if (lineStartY !== -1) {
             const lineHeight = lineEndY - lineStartY + 1;
             const isFullHeight = lineStartY === 0 && lineEndY === height - 1;
-            
-            if (lineHeight >= MIN_LINE_HEIGHT && !isFullHeight) {
+            const acceptFullHeightLine = isFullHeight && lineHeight >= Math.floor(height * 0.9);
+
+            if (lineHeight >= MIN_LINE_HEIGHT && (!isFullHeight || acceptFullHeightLine)) {
                 const thickness = measureVerticalLineThickness();
                 if (thickness <= MAX_LINE_THICKNESS) {
                     if (DEBUG) console.log(`✅ Found left vertical line: x=${x}, y=${lineStartY}-${lineEndY}, height=${lineHeight}px, thickness=${thickness}px`);

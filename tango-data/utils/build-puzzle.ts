@@ -1,10 +1,82 @@
-import { CellCoordinate, CellValue, Puzzle } from "../types/shared-types";
+import { CellCoordinate, CellValue, PrefilledData, Puzzle } from "../types/shared-types";
 
 export interface ValidationResult {
     success: boolean;
     puzzle?: Puzzle;
     error?: string;
     details?: string[];
+}
+
+export function reducePrefilledToUniqueSolution(puzzle: Puzzle, minClues: number = 4): PrefilledData {
+    const clues: PrefilledData = { ...puzzle.prefilled };
+    const coordinates = Object.keys(clues).sort();
+
+    for (const coordinate of coordinates) {
+        if (Object.keys(clues).length <= minClues) break;
+
+        const original = clues[coordinate as CellCoordinate];
+        delete clues[coordinate as CellCoordinate];
+
+        const trialPuzzle: Puzzle = {
+            ...puzzle,
+            prefilled: { ...clues }
+        };
+        const board = createBoardMatrix(trialPuzzle);
+        const solutionCount = countSolutions(board, trialPuzzle, 2);
+
+        if (solutionCount !== 1) {
+            clues[coordinate as CellCoordinate] = original;
+        }
+    }
+
+    const finalPuzzle: Puzzle = { ...puzzle, prefilled: clues };
+    const finalBoard = createBoardMatrix(finalPuzzle);
+    const finalSolutions = countSolutions(finalBoard, finalPuzzle, 2);
+    if (finalSolutions !== 1) {
+        throw new Error(`Could not derive unique-solution prefilled clues (found ${finalSolutions} solutions)`);
+    }
+
+    return clues;
+}
+
+export function buildUniquePuzzleFromConstraints(puzzle: Puzzle): Puzzle {
+    const baseFromConstraints: Puzzle = { ...puzzle, prefilled: {} };
+    let solvedBoard = findOneSolution(createBoardMatrix(baseFromConstraints), baseFromConstraints);
+    let constraints = puzzle.constraints;
+
+    // If detected constraints are contradictory, fall back to unconstrained Tango rules.
+    if (!solvedBoard) {
+        const unconstrained: Puzzle = { ...puzzle, constraints: [], prefilled: {} };
+        solvedBoard = findOneSolution(createBoardMatrix(unconstrained), unconstrained);
+        constraints = [];
+    }
+
+    if (!solvedBoard) {
+        throw new Error('Unable to build a valid solved board');
+    }
+
+    const fullPrefilled: PrefilledData = {};
+    for (let row = 0; row < puzzle.size; row++) {
+        for (let col = 0; col < puzzle.size; col++) {
+            fullPrefilled[`${row},${col}` as CellCoordinate] = solvedBoard[row][col] as CellValue;
+        }
+    }
+
+    // If we had to drop constraints, add full adjacency constraints from the solved board.
+    if (constraints.length === 0) {
+        constraints = deriveAllAdjacencyConstraintsFromBoard(solvedBoard);
+    }
+
+    const reducedPrefilled = reducePrefilledToUniqueSolution(
+        { ...puzzle, constraints, prefilled: fullPrefilled },
+        6
+    );
+
+    return {
+        ...puzzle,
+        constraints,
+        prefilled: reducedPrefilled,
+    };
 }
 
 export function buildAndValidateTangoPuzzle(parsedPuzzle: Puzzle): ValidationResult {
@@ -222,8 +294,9 @@ function validatePuzzleSolvability(puzzle: Puzzle, boardMatrix: (CellValue | und
     
     // Basic solvability check: ensure we don't have conflicting constraints
     validateConstraintConsistency(puzzle);
+    validateUniqueSolution(puzzle, boardMatrix);
     
-    console.log(`🧩 Puzzle solvability validated: balanced prefilled distribution`);
+    console.log(`🧩 Puzzle solvability validated: balanced prefilled distribution and unique solution`);
 }
 
 /**
@@ -260,4 +333,197 @@ function validateConstraintConsistency(puzzle: Puzzle): void {
     }
     
     console.log(`🔄 Constraint consistency validated: no conflicts detected`);
+}
+
+function validateUniqueSolution(puzzle: Puzzle, boardMatrix: (CellValue | undefined)[][]): void {
+    const working = boardMatrix.map(row => [...row]);
+    const solutions = countSolutions(working, puzzle, 2);
+
+    if (solutions !== 1) {
+        throw new Error(`Puzzle does not have exactly one solution (found ${solutions})`);
+    }
+}
+
+function countSolutions(
+    board: (CellValue | undefined)[][],
+    puzzle: Puzzle,
+    limit: number
+): number {
+    const next = findNextEmptyCell(board, puzzle.size);
+    if (!next) {
+        return isCompleteBoardValid(board, puzzle) ? 1 : 0;
+    }
+
+    let total = 0;
+    for (const candidate of ["☀️", "🌑"] as CellValue[]) {
+        if (!isPlacementValid(board, puzzle, next.row, next.col, candidate)) continue;
+        board[next.row][next.col] = candidate;
+        total += countSolutions(board, puzzle, limit);
+        board[next.row][next.col] = undefined;
+        if (total >= limit) return total;
+    }
+    return total;
+}
+
+function findOneSolution(
+    board: (CellValue | undefined)[][],
+    puzzle: Puzzle
+): (CellValue | undefined)[][] | null {
+    const next = findNextEmptyCell(board, puzzle.size);
+    if (!next) {
+        return isCompleteBoardValid(board, puzzle) ? board.map(r => [...r]) : null;
+    }
+
+    for (const candidate of ["☀️", "🌑"] as CellValue[]) {
+        if (!isPlacementValid(board, puzzle, next.row, next.col, candidate)) continue;
+        board[next.row][next.col] = candidate;
+        const solved = findOneSolution(board, puzzle);
+        if (solved) return solved;
+        board[next.row][next.col] = undefined;
+    }
+    return null;
+}
+
+function findNextEmptyCell(
+    board: (CellValue | undefined)[][],
+    size: number
+): { row: number; col: number } | null {
+    for (let row = 0; row < size; row++) {
+        for (let col = 0; col < size; col++) {
+            if (!board[row][col]) return { row, col };
+        }
+    }
+    return null;
+}
+
+function isPlacementValid(
+    board: (CellValue | undefined)[][],
+    puzzle: Puzzle,
+    row: number,
+    col: number,
+    value: CellValue
+): boolean {
+    board[row][col] = value;
+    const size = puzzle.size;
+    const expectedCount = size / 2;
+
+    let rowSun = 0;
+    let rowMoon = 0;
+    for (let c = 0; c < size; c++) {
+        if (board[row][c] === "☀️") rowSun++;
+        else if (board[row][c] === "🌑") rowMoon++;
+    }
+    if (rowSun > expectedCount || rowMoon > expectedCount) {
+        board[row][col] = undefined;
+        return false;
+    }
+
+    let colSun = 0;
+    let colMoon = 0;
+    for (let r = 0; r < size; r++) {
+        if (board[r][col] === "☀️") colSun++;
+        else if (board[r][col] === "🌑") colMoon++;
+    }
+    if (colSun > expectedCount || colMoon > expectedCount) {
+        board[row][col] = undefined;
+        return false;
+    }
+
+    if (hasThreeConsecutiveInRow(board[row])) {
+        board[row][col] = undefined;
+        return false;
+    }
+
+    const columnValues = board.map(r => r[col]);
+    if (hasThreeConsecutiveInRow(columnValues)) {
+        board[row][col] = undefined;
+        return false;
+    }
+
+    for (const [fromCoord, toCoord, constraintType] of puzzle.constraints) {
+        const [r1, c1] = fromCoord.split(',').map(Number);
+        const [r2, c2] = toCoord.split(',').map(Number);
+        const v1 = board[r1][c1];
+        const v2 = board[r2][c2];
+        if (!v1 || !v2) continue;
+        if (constraintType === "=" && v1 !== v2) {
+            board[row][col] = undefined;
+            return false;
+        }
+        if (constraintType === "x" && v1 === v2) {
+            board[row][col] = undefined;
+            return false;
+        }
+    }
+
+    board[row][col] = undefined;
+    return true;
+}
+
+function hasThreeConsecutiveInRow(values: (CellValue | undefined)[]): boolean {
+    for (let i = 0; i <= values.length - 3; i++) {
+        const a = values[i];
+        const b = values[i + 1];
+        const c = values[i + 2];
+        if (a && a === b && b === c) {
+            return true;
+        }
+    }
+    return false;
+}
+
+function isCompleteBoardValid(board: (CellValue | undefined)[][], puzzle: Puzzle): boolean {
+    const size = puzzle.size;
+    const expected = size / 2;
+
+    for (let row = 0; row < size; row++) {
+        const rowValues = board[row] as CellValue[];
+        const sun = rowValues.filter(v => v === "☀️").length;
+        const moon = rowValues.filter(v => v === "🌑").length;
+        if (sun !== expected || moon !== expected) return false;
+        if (hasThreeConsecutiveInRow(rowValues)) return false;
+    }
+
+    for (let col = 0; col < size; col++) {
+        const colValues = board.map(r => r[col]) as CellValue[];
+        const sun = colValues.filter(v => v === "☀️").length;
+        const moon = colValues.filter(v => v === "🌑").length;
+        if (sun !== expected || moon !== expected) return false;
+        if (hasThreeConsecutiveInRow(colValues)) return false;
+    }
+
+    for (const [fromCoord, toCoord, constraintType] of puzzle.constraints) {
+        const [r1, c1] = fromCoord.split(',').map(Number);
+        const [r2, c2] = toCoord.split(',').map(Number);
+        const v1 = board[r1][c1];
+        const v2 = board[r2][c2];
+        if (!v1 || !v2) return false;
+        if (constraintType === "=" && v1 !== v2) return false;
+        if (constraintType === "x" && v1 === v2) return false;
+    }
+
+    return true;
+}
+
+function deriveAllAdjacencyConstraintsFromBoard(board: (CellValue | undefined)[][]): Puzzle['constraints'] {
+    const size = board.length;
+    const constraints: Puzzle['constraints'] = [];
+
+    for (let row = 0; row < size; row++) {
+        for (let col = 0; col < size; col++) {
+            const current = board[row][col];
+            if (!current) continue;
+
+            if (col + 1 < size && board[row][col + 1]) {
+                const type = current === board[row][col + 1] ? '=' : 'x';
+                constraints.push([`${row},${col}`, `${row},${col + 1}`, type]);
+            }
+            if (row + 1 < size && board[row + 1][col]) {
+                const type = current === board[row + 1][col] ? '=' : 'x';
+                constraints.push([`${row},${col}`, `${row + 1},${col}`, type]);
+            }
+        }
+    }
+
+    return constraints;
 }

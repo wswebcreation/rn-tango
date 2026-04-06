@@ -93,8 +93,9 @@ export function detectTopHorizontalLine(image: any): GridLine | null {
         if (lineStartX !== -1) {
             const lineWidth = lineEndX - lineStartX + 1;
             const isFullWidth = lineStartX === 0 && lineEndX === width - 1;
-            
-            if (lineWidth >= MIN_LINE_WIDTH && !isFullWidth) {
+            const acceptFullWidthLine = isFullWidth && lineWidth >= Math.floor(width * 0.9);
+
+            if (lineWidth >= MIN_LINE_WIDTH && (!isFullWidth || acceptFullWidthLine)) {
                 const thickness = measureLineThickness();
                 if (thickness <= MAX_LINE_THICKNESS) {
                     if (DEBUG) console.log(`✅ Found top horizontal line: y=${y}, x=${lineStartX}-${lineEndX}, width=${lineWidth}px, thickness=${thickness}px`);

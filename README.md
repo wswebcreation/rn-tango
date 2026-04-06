@@ -5,6 +5,57 @@ I'd love to play the LinkedIn Tango game, but there is no history. So I've downl
 ## About Tango
 Tango is a logic puzzle game where you place sun (☀️) and moon (🌑) symbols on a grid while satisfying equality (=) and inequality (x) constraints between cells.
 
+## Download answer images (thumbnails)
+
+Answer screenshots for many Tango puzzles are published on Try Hard Guides, for example:
+
+`https://tryhardguides.com/wp-content/uploads/2025/05/Tango-answer-209.jpg`
+
+From the repository root, install dependencies if you have not already (`npm install`), then run the downloader with an inclusive puzzle number range. Files are saved as `tango-data/thumbnails/tango-XXX.jpg` (three-digit id), which matches what the image pipeline in `tango-data/` expects alongside existing `.png` thumbnails.
+
+```bash
+npm run download-tango-images -- --from=200 --to=302
+```
+
+Optional: write to another folder with `--output=path/to/folder`.
+
+The script probes known upload path prefixes under `wp-content/uploads` (see `UPLOAD_PATHS` in `scripts/download-tango-images.ts`). If a puzzle moves to a new month folder, add that segment there and re-run.
+
+**Note:** Only download or redistribute images if that matches the site’s terms and your use case.
+
+## Build `app-data/puzzles.json` from thumbnails
+
+Put answer images in `tango-data/thumbnails/` as `tango-###.jpg` (or `.png` / `.jpeg`). Then run the vision pipeline from the repo root.
+
+Process **every** thumbnail in that folder:
+
+```bash
+npm run process-tango-images
+```
+
+Process **only** one puzzle (e.g. `tango-503.jpg` must exist):
+
+```bash
+npm run process-tango-images -- --from=503 --to=503
+```
+
+Process an inclusive **range**:
+
+```bash
+npm run process-tango-images -- --from=500 --to=510
+```
+
+Valid puzzles are merged into `app-data/puzzles.json` (existing ids are skipped).
+
+### Processing guarantees and fallbacks
+
+- Every added puzzle is validated to have **exactly one solution**.
+- If normal image extraction fails for a puzzle, the pipeline applies fallbacks:
+  - adaptive crop/grid handling for newer square JPG assets
+  - image decode fallback for WebP payloads served with `.jpg` names
+  - unique-solution puzzle reconstruction from detected/derived constraints when needed
+- This keeps bulk imports stable while still enforcing single-solution validation before writing to `app-data/puzzles.json`.
+
 ## Contribute
 
 1. Clone the project
