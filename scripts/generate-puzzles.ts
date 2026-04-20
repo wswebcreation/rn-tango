@@ -3,12 +3,15 @@
  * Tango Puzzle Generator
  * ======================
  * - Assigns difficulty 1–7 from weekly slots (Monday easiest → Sunday hardest; see tango-data/utils/weekly-difficulty.ts)
- * - Generates new unique 6×6 puzzles (target clue density follows that puzzle id’s weekday slot)
+ * - Optionally generates new unique 6×6 puzzles (target clue density follows that puzzle id’s weekday slot)
  * - Deduplicates against all existing puzzles
  * - Writes minified JSON to app-data/puzzles.json
  *
  * Run from the repo root:
  *   npm run generate-puzzles
+ *
+ * Optional:
+ *   npm run generate-puzzles -- --target-total=1000
  */
 
 import * as fs from 'fs';
@@ -34,6 +37,17 @@ interface RawPuzzle {
   prefilled: Record<string, string>;
   constraints: [string, string, string][];
   difficulty?: number;
+}
+
+function readTargetTotalArg(argv: string[]): number | undefined {
+  const entry = argv.find(a => a.startsWith('--target-total='));
+  if (!entry) return undefined;
+  const raw = entry.slice('--target-total='.length).trim();
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error(`Invalid --target-total value: "${raw}"`);
+  }
+  return parsed;
 }
 
 // ---------------------------------------------------------------------------
@@ -397,6 +411,7 @@ function generatePuzzle(
 // ---------------------------------------------------------------------------
 
 function main(): void {
+  const targetTotalArg = readTargetTotalArg(process.argv.slice(2));
   const repoRoot    = path.resolve(__dirname, '..');
   const puzzlesPath = path.join(repoRoot, 'app-data', 'puzzles.json');
 
@@ -407,45 +422,51 @@ function main(): void {
   // Build dedup fingerprint set
   const existingFps = new Set(puzzles.map(p => fingerprint(p.prefilled, p.constraints)));
 
-  // Enumerate solutions
-  console.log('Enumerating all valid 6×6 Tango solution grids …');
-  const solutions = enumerateSolutions();
-  console.log(`Found ${solutions.length} valid solution grids`);
-
-  // Generate new puzzles (one weekday slot per id)
-  const TARGET_TOTAL = 1000;
-  const needed       = TARGET_TOTAL - puzzles.length;
-  console.log(`\nGenerating ${needed} new puzzles (weekday target 1→7 per puzzle id) …`);
+  // Generate new puzzles only when explicitly requested
+  const targetTotal = targetTotalArg ?? puzzles.length;
+  const needed = Math.max(0, targetTotal - puzzles.length);
+  if (needed > 0) {
+    console.log(`Target total: ${targetTotal} (${needed} new puzzles needed)`);
+    console.log('Enumerating all valid 6×6 Tango solution grids …');
+  } else {
+    console.log('No new puzzle generation requested; keeping current puzzle count.');
+  }
 
   const newPuzzles: RawPuzzle[] = [];
-  let nextId   = Math.max(...puzzles.map(p => p.id)) + 1;
-  let solIdx   = 0;
-  let fails    = 0;
-  const MAX_FAILS = solutions.length * 2;
+  if (needed > 0) {
+    const solutions = enumerateSolutions();
+    console.log(`Found ${solutions.length} valid solution grids`);
+    console.log(`\nGenerating ${needed} new puzzles (weekday target 1→7 per puzzle id) …`);
 
-  while (newPuzzles.length < needed) {
-    const solution = solutions[solIdx % solutions.length];
-    solIdx++;
-    const td = difficultyFromPuzzleId(nextId);
-    const result = generatePuzzle(solution, td, existingFps);
-    if (result) {
-      const id = nextId++;
-      newPuzzles.push({
-        id,
-        size: SIZE,
-        prefilled: result.prefilled,
-        constraints: result.constraints,
-        difficulty: difficultyFromPuzzleId(id),
-      });
-      if (newPuzzles.length % 50 === 0) process.stdout.write(`  Generated ${newPuzzles.length}/${needed} …\n`);
-      fails = 0;
-    } else {
-      fails++;
-    }
+    let nextId   = Math.max(...puzzles.map(p => p.id)) + 1;
+    let solIdx   = 0;
+    let fails    = 0;
+    const MAX_FAILS = solutions.length * 2;
 
-    if (fails >= MAX_FAILS) {
-      process.stderr.write(`Warning: exhausted solution space after ${newPuzzles.length} new puzzles.\n`);
-      break;
+    while (newPuzzles.length < needed) {
+      const solution = solutions[solIdx % solutions.length];
+      solIdx++;
+      const td = difficultyFromPuzzleId(nextId);
+      const result = generatePuzzle(solution, td, existingFps);
+      if (result) {
+        const id = nextId++;
+        newPuzzles.push({
+          id,
+          size: SIZE,
+          prefilled: result.prefilled,
+          constraints: result.constraints,
+          difficulty: difficultyFromPuzzleId(id),
+        });
+        if (newPuzzles.length % 50 === 0) process.stdout.write(`  Generated ${newPuzzles.length}/${needed} …\n`);
+        fails = 0;
+      } else {
+        fails++;
+      }
+
+      if (fails >= MAX_FAILS) {
+        process.stderr.write(`Warning: exhausted solution space after ${newPuzzles.length} new puzzles.\n`);
+        break;
+      }
     }
   }
 

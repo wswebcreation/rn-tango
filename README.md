@@ -59,7 +59,13 @@ After editing `puzzles.json` or changing the anchor, recompute difficulties for 
 npm run apply-weekly-difficulty
 ```
 
-`npm run process-tango-images` applies the same rule when it writes the merged file (so every entry stays aligned). **`npm run generate-puzzles`** still fills toward `TARGET_TOTAL` in `scripts/generate-puzzles.ts`, then applies this weekly mapping before save.
+`npm run process-tango-images` applies the same rule when it writes the merged file (so every entry stays aligned).
+
+`npm run generate-puzzles` now **recomputes difficulty only** by default (no extra puzzle generation). If you do want to grow the dataset, pass an explicit target total:
+
+```bash
+npm run generate-puzzles -- --target-total=1000
+```
 
 ### Processing guarantees and fallbacks
 
